@@ -2,7 +2,7 @@
 
 A reproducible SpaDES module for preparing landbase layers for Eastern Canada  
 (ON, QC, NB, NS, PEI, NL).  
-Authors: **Shirin Varkuhi** & **Tyler Rudolph**
+Authors: **Shirin Varkouhi** & **Tyler Rudolph**
 
 ---
 
@@ -97,8 +97,8 @@ simOut <- spades(sim)
 
 ## Authors
 
-- **Shirin Varkuhi** — Lead developer  
-- **Tyler Rudolph** — Data workflow advisor  
+- **Shirin Varkouhi** — Lead developer  
+- **Tyler Rudolph** — Lead developer  
 
 ---
 

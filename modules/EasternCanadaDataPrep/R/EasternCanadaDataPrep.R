@@ -8,7 +8,7 @@ defineModule(sim, list(
   name = "EasternCanadaDataPrep",
   description = "Prepare spatial layers for Eastern Canada",
   authors = c(
-    person("Shirin", "Varkuhi",
+    person("Shirin", "Varkouhi",
            email = "shirin.varkuhi@gmail.com",
            role = c("aut", "cre")),
     person("Tyler", "Rudolph",
