@@ -1,0 +1,22 @@
+
+# RStudio
+.Rproj.user/
+.Rhistory
+.RData
+.DS_Store
+
+# Project structure
+cache/
+inputs/
+output/
+scratch/
+
+# Common large files
+*.zip
+*.tif
+*.gpkg
+*.gdb
+*.shp
+*.shx
+*.dbf
+
