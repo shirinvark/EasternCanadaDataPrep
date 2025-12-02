@@ -1,0 +1,169 @@
+---
+title: "EasternCanadaDataPrep Manual"
+subtitle: "v.`r SpaDES.core::moduleMetadata(module = 'EasternCanadaDataPrep', path = '..')$version`"
+date: "Last updated: `r Sys.Date()`"
+output:
+  bookdown::html_document2:
+    toc: true
+    toc_float: true
+    theme: sandstone
+    number_sections: false
+    df_print: paged
+    keep_md: yes
+editor_options:
+  chunk_output_type: console
+bibliography: citations/references_EasternCanadaDataPrep.bib
+link-citations: true
+always_allow_html: true
+---
+
+# EasternCanadaDataPrep Module
+
+<!-- the following are text references used in captions for LaTeX compatibility -->
+(ref:EasternCanadaDataPrep) *EasternCanadaDataPrep*
+
+```{r setup-EasternCanadaDataPrep, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, eval = FALSE, results = "hold") ## change to eval = TRUE if all chunks are to be evaluated
+
+dir.create("figures", showWarnings = FALSE)
+
+download.file(url = "https://img.shields.io/badge/Made%20with-Markdown-1f425f.png",
+              destfile = "figures/markdownBadge.png",
+              mode = "wb")
+```
+
+[![made-with-Markdown](figures/markdownBadge.png)](https://commonmark.org)
+
+<!-- if knitting to pdf remember to add the pandoc_args: ["--extract-media", "."] option to yml in order to get the badge images -->
+
+#### Authors:
+
+`r paste(as.character(SpaDES.core::moduleMetadata(module = "EasternCanadaDataPrep", path = '..')$authors), sep = ', ')`
+<!-- ideally separate authors with new lines, '\n' not working -->
+
+## Module Overview
+
+### Module summary
+
+This module prepares all spatial data layers required for the Eastern Canada
+landbase. It automatically downloads (when sourceURLs are provided), extracts,
+crops, masks, reprojects, and standardizes multiple raw datasets into a
+consistent geospatial framework.
+
+The module processes layers such as Protected Areas (CPCAD), Land Cover (LCC
+2020), Forest Management Units (FMUs), hydrology (NHN/CHN), and the study area
+boundary. All outputs are harmonized in a common projection (NAD83 / Conus
+Albers – EPSG:5070) and saved in formats ready for downstream use in LandR,
+AAC calculation, harvest modules, and classification routines.
+
+
+### Module inputs and parameters
+
+This module requires several raw spatial datasets, which may either be provided
+locally or downloaded via `prepInputs()` when a sourceURL is specified. These
+include the study area polygon, CPCAD protected areas, land cover rasters,
+FMU boundaries, and hydrology layers.
+
+The following tables are automatically generated from the module metadata and
+list all input objects and user-visible parameters.
+
+
+```{r moduleInputs-EasternCanadaDataPrep, echo = FALSE, eval = TRUE, message = FALSE, warning = FALSE}
+df_inputs <- SpaDES.core::moduleInputs("EasternCanadaDataPrep", "E:/EasternCanadaProject")
+knitr::kable(df_inputs,
+             caption = "List of (ref:EasternCanadaDataPrep) input objects and their description.") |>
+  kableExtra::kable_styling(latex_options = "scale_down", full_width = TRUE)
+```
+
+Summary of user-visible parameters (Table \@ref(tab:moduleParams-EasternCanadaDataPrep))
+
+
+```{r moduleParams-EasternCanadaDataPrep, echo = FALSE, eval = TRUE, message = FALSE, warning = FALSE}
+df_params <- SpaDES.core::moduleParams("EasternCanadaDataPrep", "E:/EasternCanadaProject")
+knitr::kable(df_params, caption = "List of (ref:EasternCanadaDataPrep) parameters and their description.") |>
+  kableExtra::kable_styling(latex_options = "scale_down", full_width = TRUE)
+```
+
+### Events
+
+The module uses the standard SpaDES event structure. Each event is responsible
+for a well-defined stage of the data preparation workflow:
+
+#### init
+Initializes the module by setting up paths, loading or generating the study area
+object, and preparing any module-level variables required for downstream events.
+
+#### download
+Downloads all raw spatial datasets that define a `sourceURL` or loads them from
+the local cache if they already exist. This includes CPCAD, LCC2020, FMUs, and
+NHN/CHN hydrology layers. Archives are extracted and validated.
+
+#### prep
+Processes all raw datasets by cropping and masking them to the study area,
+reprojecting them to the target CRS (EPSG:5070), cleaning attributes, and
+standardizing formats. This event produces the harmonized spatial layers used
+by subsequent modules.
+
+#### save
+Writes the cleaned and standardized spatial layers to the module’s designated
+outputPath, ensuring that each dataset is reproducible and consistently named.
+
+### Plotting
+
+This module does not generate plots by default. Optional diagnostic visualizations
+(such as quick maps of the study area or processed layers) may be added for
+quality assurance if needed.
+
+### Saving
+
+The module saves all processed spatial layers in standardized geospatial formats,
+suitable for downstream modeling. Typical outputs include:
+
+• Processed CPCAD protected areas (e.g., `cpcad_5070.gpkg`)
+• Processed land cover raster (e.g., `lcc2020_5070.tif`)
+• Forest Management Unit boundaries (vector or raster)
+• Hydrology data (e.g., `flowlines_5070.gpkg`)
+• Study area polygon (`studyArea_5070.gpkg`)
+
+All files are written to the simulation `outputPath` defined by the user.
+
+### Module outputs
+
+Description of the module outputs (Table \@ref(tab:moduleOutputs-EasternCanadaDataPrep)).
+
+```{r moduleOutputs-EasternCanadaDataPrep, echo = FALSE, eval = TRUE, message = FALSE, warning = FALSE}
+df_outputs <- SpaDES.core::moduleOutputs("EasternCanadaDataPrep", "E:/EasternCanadaProject")
+knitr::kable(df_outputs, caption = "List of (ref:EasternCanadaDataPrep) outputs and their description.") |>
+  kableExtra::kable_styling(latex_options = "scale_down", full_width = TRUE)
+```
+
+### Links to other modules
+
+This module provides foundational spatial layers required by multiple downstream
+modules, including:
+
+• LandR Biomass (pixel-group initialization)
+• AAC (Allowable Annual Cut) calculation module
+• SimpleHarvest / block-based harvest modules
+• Forest classification modules for yield curve assignment
+
+Because these modules depend on a harmonized spatial landbase, the
+EasternCanadaDataPrep module must be run before starting any forest dynamics,
+classification, or harvest simulations.
+
+### Getting help
+
+For questions, bug reports, or feature requests:
+
+• GitHub issues:
+  https://github.com/shirinvark/EasternCanadaDataPrep/issues
+
+• SpaDES user support (Zulip):
+  https://spades.zulipchat.com
+
+• SpaDES documentation:
+  https://spades-core.predictiveecology.org
+
+## References
+
+<!-- autogenerated from bibligraphy -->
