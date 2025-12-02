@@ -1,0 +1,2 @@
+"file" "checksum" "filesize" "algorithm"
+"CPCAD_2024.gpkg" "596f0fc096fea29c" "389988352" "xxhash64"

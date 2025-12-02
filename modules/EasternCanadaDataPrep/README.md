@@ -1,146 +1,116 @@
-# EasternCanadaDataPrep <img src="https://img.shields.io/badge/SpaDES-Module-blue?style=flat-square" align="right"/>
+![made-with-Markdown](https://img.shields.io/badge/Made%20with-Markdown-1f425f.svg)
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)]()
-[![R](https://img.shields.io/badge/R-%3E=4.2-blue.svg)]()
-[![SpaDES.core](https://img.shields.io/badge/SpaDES.core-%3E=2.0-green.svg)]()
-[![reproducible](https://img.shields.io/badge/reproducible-enabled-brightgreen.svg)]()
+# EasternCanadaDataPrep
 
----
+Prepare and standardize all spatial layers required for the Eastern Canada landbase.  
+This SpaDES module downloads, processes, crops, masks, filters, and reprojects datasets such as protected areas (CPCAD), land cover (LCC2020), forest management units (FMUs), and study area boundaries.
 
-## 📌 Overview
-
-**EasternCanadaDataPrep** is a fully automated, reproducible  
-**SpaDES** module designed to prepare landbase layers for **Eastern Canada**:
-
-- Ontario (ON)  
-- Quebec (QC)  
-- New Brunswick (NB)  
-- Nova Scotia (NS)  
-- Prince Edward Island (PEI)  
-- Newfoundland and Labrador (NL)
-
-It downloads, processes, and harmonizes:
-
-- **LCC2020** — Land Cover of North America  
-- **CPCAD 2024** — Canadian Protected & Conserved Areas  
-- **FMU Canada** — Forest Management Units  
-
-The module generates:
-
-- `forestMask` — forest/non-forest  
-- Protected-area removal mask  
-- FMU boundary mask  
-- Final **landbase raster**  
-- `studyArea.gpkg`  
-- Log file documenting outputs  
+This module is part of the **Eastern Canada Landbase Preparation Pipeline**, supporting downstream models including **LandR**, **AAC calculation**, **SimpleHarvest**, and **classification modules**.
 
 ---
 
-## 🚀 Features
+## 🌎 Purpose
 
-- ✔ Automatic study-area generation (Eastern Canada)  
-- ✔ Automated downloading with `reproducible::prepInputs()`  
-- ✔ Forest mask using LCC2020  
-- ✔ Filtering & exclusion of protected/private areas (CPCAD)  
-- ✔ FMU masking  
-- ✔ GeoTIFF & GPKG output support  
-- ✔ Fully reproducible workflow  
+The goal of this module is to create a **clean, harmonized, and analysis-ready landbase** for Eastern Canada.  
+It ensures all spatial datasets:
 
----
-
-## 📁 Project Structure
-
-EasternCanadaProject/
-├── modules/
-│ └── EasternCanadaDataPrep/
-│ ├── EasternCanadaDataPrep.R
-│ ├── README.md
-│ └── helpers.R (optional)
-├── inputs/
-├── output/
-├── cache/
-└── scratch/
-
-yaml
-Copy code
+- share the same CRS (EPSG:5070 — NAD83 / Conus Albers)
+- are correctly clipped to the study area  
+- are masked, filtered, and cleaned  
+- follow consistent naming and file formats  
+- are ready for use in other SpaDES modules  
 
 ---
 
-## 🧩 Installation
+## 📦 Input Objects
 
-### Install required R packages:
+The module accepts the following inputs (may be provided externally or created inside the module):
+
+| Object      | Class            | Description                                   |
+|-------------|------------------|-----------------------------------------------|
+| `studyArea` | sf / SpatVector  | Polygon defining the modeling area           |
+| `LCC2020`   | SpatRaster       | Land cover (30m)                              |
+| `CPCAD`     | sf / SpatVector  | Protected areas                               |
+| `FMU`       | sf / SpatVector  | Forest Management Units                       |
+
+If not provided, `studyArea` can be auto-generated (default: ON, QC, NB, NS, PEI, NL).
+
+---
+
+## 🛠 What the module does
+
+### ✔ Downloads (optional via `prepInputs()`)
+- CPCAD 2024 (via Google Drive link)
+- FMU boundaries (Canada-wide)
+
+### ✔ Filters CPCAD  
+Removes:
+- STATUS: Proposed (3), Delisted (5)  
+- PA_OECM_DF: Proposed (4), Delisted (5)  
+- IUCN categories outside 1–7  
+
+### ✔ Preprocesses FMUs  
+- Clips to studyArea  
+- Reprojects to EPSG:5070  
+
+### ✔ Prepares land cover (if provided)  
+- Crops, masks, reprojects  
+
+### ✔ Builds unified landbase object  
+Creates:
 
 ```r
-install.packages(c(
-  "SpaDES.core", "SpaDES.tools", "reproducible",
-  "terra", "sf", "rnaturalearth", "httr2", "dplyr", "fs"
-))
-▶ How to Run the Module
-r
-Copy code
-library(SpaDES.core)
-
-pathsList <- list(
-  modulePath = "E:/EasternCanadaProject/modules",
-  inputPath  = "E:/EasternCanadaProject/inputs",
-  outputPath = "E:/EasternCanadaProject/output",
-  cachePath  = "E:/EasternCanadaProject/cache"
+sim$EasternCanadaLandbase <- list(
+  LCC2020 = <raster>,
+  CPCAD   = <sf>,
+  FMU     = <sf>
 )
+A clean, consistent spatial bundle for downstream simulation modules.
 
-sim <- simInit(
-  times = list(start = 0, end = 1),
-  params = list(
-    EasternCanadaDataPrep = list(useUserStudyArea = FALSE)
-  ),
-  modules = list("EasternCanadaDataPrep"),
-  paths = pathsList
-)
+📤 Output Object
+Output Name	Type	Description
+EasternCanadaLandbase	list	Harmonized list of processed spatial layers
 
-simOut <- spades(sim)
-📦 Outputs (saved to /output)
-landbase_final.tif — final landbase raster
+📚 Documentation
+Full module documentation is available in:
 
-forestMask.tif — forest-only raster
-
-studyArea.gpkg — Eastern Canada merged boundary
-
-output_log.txt — run log
-
-📚 Dependencies
-Package	Purpose
-SpaDES.core	module engine
-reproducible	caching + downloading
-terra	raster operations
-sf	vector operations
-rnaturalearth	boundary data
-httr2	secure downloads
-dplyr	filtering, processing
-
-🔬 Citation
-If you use this module in a publication:
-
-rust
 Copy code
-Varkouhi, S. & Rudolph, T. (2025).
-EasternCanadaDataPrep: A SpaDES module for automated landbase preparation
-for Eastern Canada. https://github.com/<your_repo>
-👩‍💻 Authors
-Shirin Varkouhi — Lead Developer
+EasternCanadaDataPrep.Rmd
+This includes:
 
-Tyler Rudolph — Co-Developer
+module summary
 
-📜 License
-This module is released under the MIT License.
+inputs/outputs tables
 
-yaml
-Copy code
-MIT License © 2025 Shirin Varkouhi & Tyler Rudolph
-💛 Notes
-This module is part of the larger
-Harvest+ / Hanzlik AAC / LandR workflow for cross-border forest modeling.
+event descriptions
 
-Please report issues or improvement suggestions via GitHub Issues.
+saving/plotting behavior
 
-nginx
-Copy code
-Happy modeling! 🌲🔥
+acknowledgment + citations
+
+🧩 Related Modules
+This module feeds into:
+
+LandR Biomass (pixel-group initialization)
+
+AAC Calculator (yield curves + harvestable landbase)
+
+SimpleHarvest / block-based harvest
+
+Forest classification / yield-curve assignment
+
+🤝 Getting Help
+For questions, issues, or feature requests:
+
+➡ GitHub Issues:
+https://github.com/shirinvark/EasternCanadaDataPrep/issues
+
+➡ SpaDES Help (Zulip):
+https://spades.zulipchat.com
+
+➡ SpaDES Documentation:
+https://spades-core.predictiveecology.org
+
+© Author
+Shirin Varkouhi (Université Laval)
+Contact: shirin.varkuhi@gmail.com
