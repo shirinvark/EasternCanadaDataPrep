@@ -1,3 +1,5 @@
+![made-with-Markdown](https://img.shields.io/badge/Made%20with-Markdown-1f425f.svg)
+
 # EasternCanadaDataPrep
 
 Prepare and standardize all spatial layers required for the Eastern Canada landbase.  
