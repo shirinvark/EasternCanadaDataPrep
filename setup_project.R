@@ -1,30 +1,35 @@
 # ================================================================
 #   EasternCanadaProject — CLEAN & CORRECT PROJECT SETUP
-#   Makes a GitHub-friendly SpaDES project structure
-#   Author: Shirin Varkuhi
+#   GitHub-ready SpaDES project structure
+#   Author: Shirin Varkouhi
 # ================================================================
-install.packages("remotes")
+
+# -----------------------------
+# 1) Install core dependencies
+# -----------------------------
+if (!requireNamespace("remotes", quietly = TRUE))
+  install.packages("remotes")
 
 remotes::install_github("PredictiveEcology/Require", force = TRUE)
 remotes::install_github("PredictiveEcology/reproducible", force = TRUE)
 remotes::install_github("PredictiveEcology/SpaDES.core", force = TRUE)
 
 # -----------------------------
-# 1) Project root
+# 2) Define project root
 # -----------------------------
 project_path <- "E:/EasternCanadaProject"
 dir.create(project_path, showWarnings = FALSE, recursive = TRUE)
 setwd(project_path)
 
 # -----------------------------
-# 2) Create correct folders
+# 3) Create standard folder structure
 # -----------------------------
 folders <- c(
   "modules",       # SpaDES modules
-  "inputs",        # downloaded data, raw data, gdb, zip...
+  "inputs",        # raw/downloaded data
   "cache",         # reproducible cache
-  "output",        # final rasters, tables, maps
-  "scratch"        # temporary files
+  "outputs",       # processed rasters, tables
+  "scratch"        # temporary workspace
 )
 
 for (f in folders) {
@@ -32,45 +37,54 @@ for (f in folders) {
 }
 
 # -----------------------------
-# 3) Create module folder structure
+# 4) Prepare empty module structure (no overwriting!)
 # -----------------------------
 module_name <- "EasternCanadaDataPrep"
-
 module_dir <- file.path(project_path, "modules", module_name)
-dir.create(module_dir, showWarnings = FALSE, recursive = TRUE)
 
+dir.create(module_dir, recursive = TRUE, showWarnings = FALSE)
 dir.create(file.path(module_dir, "R"), showWarnings = FALSE)
 dir.create(file.path(module_dir, "data"), showWarnings = FALSE)
 
-# Empty module files (to be filled later)
-file.create(file.path(module_dir, "DESCRIPTION"))
-file.create(file.path(module_dir, "R", paste0(module_name, ".R")))
-file.create(file.path(module_dir, "R", "helpers.R"))
+# NOTE: We DO NOT create empty module files because the real module already exists.
+# This script only prepares clean folders.
 
 # -----------------------------
-# 4) Create .gitignore
+# 5) Create GitHub-friendly .gitignore
 # -----------------------------
 gitignore_content <- '
-# RStudio
+# ---------------------
+# RStudio files
+# ---------------------
 .Rproj.user/
 .Rhistory
 .RData
 .DS_Store
 
-# Project structure
+# ---------------------
+# SpaDES outputs & caches
+# ---------------------
 cache/
-inputs/
-output/
+outputs/
 scratch/
 
-# Common large files
+# ---------------------
+# Large geospatial data (do NOT commit)
+# ---------------------
+inputs/
 *.zip
 *.tif
+*.tiff
 *.gpkg
 *.gdb
 *.shp
 *.shx
 *.dbf
+*.prj
+*.xml
+*.aux
+*.sbn
+*.sbx
 '
 
 writeLines(gitignore_content, file.path(project_path, ".gitignore"))
