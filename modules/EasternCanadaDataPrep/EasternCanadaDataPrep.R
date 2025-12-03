@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 ## Everything in this file and any files in the R directory are sourced during `simInit()`;
 ## all functions and objects are put into the `simList`.
 ## To use objects, use `sim$xxx` (they are globally available to all modules).
@@ -113,34 +112,68 @@ doEvent.EasternCanadaDataPrep <- function(sim, eventTime, eventType) {
 #}
 buildLandbase <- function(sim) {
   
-  message("🔵 Building Eastern Canada Landbase...")
+  message("🔵 Building Eastern Canada Landbase (FMU + CPCAD)...")
   
   studyArea <- sim$studyArea
   
-  if (is.null(sim$LCC2020))
-    stop("LCC2020 was not created or supplied.")
+  # Check inputs
+  if (is.null(sim$CPCAD)) stop("CPCAD missing.")
+  if (is.null(sim$FMU))   stop("FMU missing.")
   
-  if (is.null(sim$CPCAD))
-    stop("CPCAD was not created or supplied.")
-  
-  if (is.null(sim$FMU))
-    stop("FMU was not created or supplied.")
-  
-  lcc   <- sim$LCC2020
   cpcad <- sim$CPCAD
   fmu   <- sim$FMU
   
-  ## در آینده: hydrology هم اضافه می‌کنی
+  # -------------------------------------------------------
+  # 1) Create raster template (30 m)
+  # -------------------------------------------------------
+  message("▶ Creating raster template...")
+  r <- terra::rast(extent = terra::ext(studyArea), 
+                   resolution = 30,
+                   crs = terra::crs(studyArea))
+  terra::values(r) <- 0
   
+  # -------------------------------------------------------
+  # 2) Rasterize FMU  (inside FMU = 1)
+  # -------------------------------------------------------
+  message("▶ Rasterizing FMU...")
+  fmu_r <- terra::rasterize(terra::vect(fmu), r, field = 1, background = 0)
+  
+  # -------------------------------------------------------
+  # 3) Rasterize CPCAD (protected = 1)
+  # -------------------------------------------------------
+  message("▶ Rasterizing CPCAD...")
+  cpcad_r <- terra::rasterize(terra::vect(cpcad), r, field = 1, background = 0)
+  
+  # -------------------------------------------------------
+  # 4) Combine → Harvestable = FMU == 1 AND CPCAD == 0
+  # -------------------------------------------------------
+  message("▶ Combining FMU + CPCAD to create Harvestable Land Base...")
+  harvestable <- terra::ifel(fmu_r == 1 & cpcad_r == 0, 1, 0)
+  
+  # -------------------------------------------------------
+  # 5) Save output rasters to dataPath
+  # -------------------------------------------------------
+  outDir <- file.path(dataPath(sim), "HarvestableLandBase")
+  dir.create(outDir, recursive = TRUE, showWarnings = FALSE)
+  
+  terra::writeRaster(harvestable, file.path(outDir, "HLB_v1.tif"), overwrite = TRUE)
+  terra::writeRaster(fmu_r,        file.path(outDir, "FMU_raster.tif"), overwrite = TRUE)
+  terra::writeRaster(cpcad_r,      file.path(outDir, "CPCAD_raster.tif"), overwrite = TRUE)
+  
+  # -------------------------------------------------------
+  # 6) Store in sim
+  # -------------------------------------------------------
   sim$EasternCanadaLandbase <- list(
-    LCC2020 = lcc,
-    CPCAD   = cpcad,
-    FMU     = fmu
+    FMU_raster       = fmu_r,
+    CPCAD_raster     = cpcad_r,
+    Harvestable_LB   = harvestable
   )
   
-  message("✔ Eastern Canada Landbase created.")
+  message("✔ Harvestable Land Base created and saved.")
+  
   return(invisible(sim))
 }
+
 
 .inputObjects <- function(sim) {
   # Any code written here will be run during the simInit for the purpose of creating
@@ -303,7 +336,6 @@ ggplotFn <- function(data, ...) {
     ggplot2::geom_histogram(...)
 }
 
-=======
 ## Everything in this file and any files in the R directory are sourced during `simInit()`;
 ## all functions and objects are put into the `simList`.
 ## To use objects, use `sim$xxx` (they are globally available to all modules).
@@ -418,34 +450,58 @@ doEvent.EasternCanadaDataPrep <- function(sim, eventTime, eventType) {
 #}
 buildLandbase <- function(sim) {
   
-  message("🔵 Building Eastern Canada Landbase...")
+  message("🔵 Building Eastern Canada Landbase (FMU + CPCAD → HLB)...")
   
   studyArea <- sim$studyArea
+  if (is.null(sim$CPCAD)) stop("❌ CPCAD missing.")
+  if (is.null(sim$FMU))   stop("❌ FMU missing.")
   
-  if (is.null(sim$LCC2020))
-    stop("LCC2020 was not created or supplied.")
-  
-  if (is.null(sim$CPCAD))
-    stop("CPCAD was not created or supplied.")
-  
-  if (is.null(sim$FMU))
-    stop("FMU was not created or supplied.")
-  
-  lcc   <- sim$LCC2020
-  cpcad <- sim$CPCAD
+  cpcad <- sim$CPCAD     # already SpatVector or sf
   fmu   <- sim$FMU
   
-  ## در آینده: hydrology هم اضافه می‌کنی
+  ## 1) Convert studyArea to SpatVector
+  sa <- terra::vect(studyArea)
   
+  message("▶ Creating raster template...")
+  r <- terra::rast(
+    extent = terra::ext(sa),
+    resolution = 30,
+    crs = terra::crs(sa)
+  )
+  terra::values(r) <- 0
+  
+  ## 2) Rasterize FMU (NO vect here)
+  message("▶ Rasterizing FMU...")
+  fmu_r <- terra::rasterize(fmu, r, field = 1, background = 0)
+  
+  ## 3) Rasterize CPCAD
+  message("▶ Rasterizing CPCAD...")
+  cpcad_r <- terra::rasterize(cpcad, r, field = 1, background = 0)
+  
+  ## 4) HLB
+  message("▶ Creating HLB...")
+  hlb <- terra::ifel(fmu_r == 1 & cpcad_r == 0, 1, 0)
+  
+  ## 5) Save
+  outDir <- file.path(dataPath(sim), "HarvestableLandBase")
+  dir.create(outDir, recursive = TRUE, showWarnings = FALSE)
+  
+  terra::writeRaster(hlb,    file.path(outDir, "HLB_v1.tif"), overwrite = TRUE)
+  terra::writeRaster(fmu_r,  file.path(outDir, "FMU_raster.tif"), overwrite = TRUE)
+  terra::writeRaster(cpcad_r,file.path(outDir, "CPCAD_raster.tif"), overwrite = TRUE)
+  
+  ## 6) Store in sim
   sim$EasternCanadaLandbase <- list(
-    LCC2020 = lcc,
-    CPCAD   = cpcad,
-    FMU     = fmu
+    FMU_raster       = fmu_r,
+    CPCAD_raster     = cpcad_r,
+    Harvestable_LB   = hlb
   )
   
-  message("✔ Eastern Canada Landbase created.")
+  message("✔ Harvestable Land Base created and saved.")
   return(invisible(sim))
 }
+
+
 
 .inputObjects <- function(sim) {
   # Any code written here will be run during the simInit for the purpose of creating
@@ -608,4 +664,3 @@ ggplotFn <- function(data, ...) {
     ggplot2::geom_histogram(...)
 }
 
->>>>>>> 8259c58fb1e2995e1602cb2c4099a051fb4d3a81

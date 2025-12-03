@@ -4,13 +4,14 @@ library(reproducible)
 library(terra)
 library(sf)
 
-options(
-  spades.modulePath = "E:/EasternCanadaProject/modules",
-  spades.inputPath  = "E:/EasternCanadaProject/inputs",
-  spades.outputPath = "E:/EasternCanadaProject/outputs",
-  spades.scratchPath = "E:/EasternCanadaProject/scratch",
-  reproducible.cachePath = "E:/EasternCanadaProject/cache"
+setPaths(
+  modulePath = "E:/EasternCanadaProject/modules",
+  inputPath  = "E:/EasternCanadaProject/inputs",
+  outputPath = "E:/EasternCanadaProject/outputs",
+  scratchPath = "E:/EasternCanadaProject/scratch",
+  cachePath = "E:/EasternCanadaProject/cache"
 )
+
 
 dir.create("E:/EasternCanadaProject/inputs", recursive = TRUE, showWarnings = FALSE)
 dir.create("E:/EasternCanadaProject/outputs", recursive = TRUE, showWarnings = FALSE)
@@ -22,3 +23,13 @@ sim <- simInit(
   modules = list("EasternCanadaDataPrep")
 )
 sim$paths
+sim <- spades(sim)
+hlb <- sim$EasternCanadaLandbase$Harvestable_LB
+
+cols <- c("grey80", "darkgreen")   # 0 = grey, 1 = green
+
+terra::plot(
+  hlb,
+  col = cols,
+  main = "HLB — Harvestable Land Base"
+)
