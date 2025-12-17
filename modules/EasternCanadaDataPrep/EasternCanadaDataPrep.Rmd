@@ -29,15 +29,16 @@ and harvest allocation modules.
 
 The module performs the following tasks:
 
-- Defines a consistent study area for Eastern Canada
-- Loads and prepares Forest Management Units (FMUs)
-- Loads, filters, and standardizes protected and conserved areas (CPCAD)
-- Loads and buffers hydrology layers
-- Optionally constructs a vector-based Harvestable Land Base (HLB)
+- Defines a consistent study area for Eastern Canada  
+- Loads and prepares Forest Management Units (FMUs)  
+- Loads, filters, and standardizes protected and conserved areas (CPCAD)  
+- Loads and buffers hydrology layers  
+- Loads and standardizes road network data  
+- Optionally constructs a vector-based Harvestable Land Base (HLB)  
 
 All spatial layers are harmonized to a common projection:
 
-Canada Albers Equal Area Conic (ESRI:102001)
+**Canada Albers Equal Area Conic (ESRI:102001)**
 
 ---
 
@@ -53,15 +54,15 @@ most commonly a LandR-based module.
 
 Expected land-cover input:
 
-- Object name: LandCover
-- Data type: Raster
-- Projection: ESRI:102001
+- Object name: `LandCover`  
+- Data type: Raster  
+- Projection: ESRI:102001  
 
 If a land-cover raster is supplied, it is passed through unchanged and stored in
 the landbase object.
 
 If no land-cover raster is supplied, the landbase is still created but the
-LandCover element is empty.
+`LandCover` element is empty.
 
 ---
 
@@ -75,9 +76,9 @@ filtered to retain only areas relevant for landbase construction.
 
 Filtering rules applied include:
 
-- Retention of designated protected areas and OECMs
-- Removal of proposed and delisted areas
-- Retention of IUCN categories I through VII
+- Retention of designated protected areas and OECMs  
+- Removal of proposed and delisted areas  
+- Retention of IUCN categories I through VII  
 
 The resulting CPCAD layer represents areas excluded from harvest and is used
 directly in Harvestable Land Base construction.
@@ -98,14 +99,42 @@ constructed and analysed.
 
 Hydrology layers are loaded from preprocessed NHN-based datasets and include:
 
-- Flowlines
-- Watercourses
-- Waterbodies
+- Flowlines  
+- Watercourses  
+- Waterbodies  
 
 All hydrology layers are reprojected to ESRI:102001 and buffered using a
 user-defined buffer distance.
 
 Both raw and buffered hydrology layers are retained for downstream use.
+
+---
+
+## Road network (RNF)
+
+Road network data are derived from the **Road Network File (RNF), Statistics
+Canada (2011)**.
+
+In the current implementation, the road network is:
+
+- Downloaded from Statistics Canada  
+- Loaded as vector line features  
+- Cropped and masked to the study area  
+- Reprojected to ESRI:102001  
+
+No additional filtering, classification, or rasterization of roads is performed
+within this module.
+
+The road network is included to ensure that transportation infrastructure is
+available for downstream modules that may require it, such as:
+
+- Access and operability modelling  
+- Harvest planning and allocation  
+- Road-density or fragmentation analyses  
+
+All further processing of road data (e.g., buffering, rasterization, weighting)
+is intentionally deferred to downstream modules (e.g., LandR or harvest-related
+modules).
 
 ---
 
@@ -115,9 +144,9 @@ The construction of a Harvestable Land Base is optional.
 
 When enabled, the HLB is constructed for a single user-specified FMU by:
 
-- Starting from the FMU boundary
-- Removing protected and conserved areas
-- Removing buffered hydrology features
+- Starting from the FMU boundary  
+- Removing protected and conserved areas  
+- Removing buffered hydrology features  
 
 The resulting HLB is a vector polygon representing potentially harvestable land.
 
@@ -133,11 +162,12 @@ prepared spatial layers.
 
 This landbase includes:
 
-- Land cover (if supplied externally)
-- Forest Management Units
-- Protected and conserved areas
-- Hydrology (raw and buffered)
-- Harvestable Land Base (optional)
+- Land cover (if supplied externally)  
+- Forest Management Units  
+- Protected and conserved areas  
+- Hydrology (raw and buffered)  
+- Road network  
+- Harvestable Land Base (optional)  
 
 This object is intended to be consumed by downstream modelling modules.
 
@@ -147,10 +177,10 @@ This object is intended to be consumed by downstream modelling modules.
 
 EasternCanadaDataPrep provides the foundational spatial layers required by:
 
-- LandR biomass and forest dynamics modules
-- Allowable Annual Cut (AAC) calculation modules
-- Harvest scheduling and allocation modules
-- Forest classification and yield-curve assignment modules
+- LandR biomass and forest dynamics modules  
+- Allowable Annual Cut (AAC) calculation modules  
+- Harvest scheduling and allocation modules  
+- Forest classification and yield-curve assignment modules  
 
 This module must be run before any forest dynamics or harvest simulations.
 

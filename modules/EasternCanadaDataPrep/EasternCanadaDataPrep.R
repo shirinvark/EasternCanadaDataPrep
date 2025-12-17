@@ -377,6 +377,31 @@ buildLandbase <- function(sim) {
   ## ---------------------------------------------------------
   ## 5) Hydrology (NHN – SAFE MODE)
   ## ---------------------------------------------------------
+  ## ---------------------------------------------------------
+  ## 4.5) Road Network (RNF – Statistics Canada, 2011)
+  ## ---------------------------------------------------------
+  
+  if (!suppliedElsewhere("RoadNetwork", sim)) {
+    
+    message("▶ Preparing Road Network (RNF 2011)...")
+    
+    rnf_dir <- file.path(dPath, "RoadNetwork")
+    dir.create(rnf_dir, recursive = TRUE, showWarnings = FALSE)
+    
+    sim$RoadNetwork <- Cache(
+      prepInputs,
+      url = "https://www12.statcan.gc.ca/census-recensement/2011/geo/RNF-FRR/files-fichiers/lrnf000r25a_e.zip",
+      destinationPath = rnf_dir,
+      archive = "lrnf000r25a_e.zip",
+      targetFile = "lrnf000r25a_e.shp",
+      fun = terra::vect,
+      cropTo = studyArea,
+      projectTo = studyArea,
+      overwrite = FALSE
+    )
+    
+    message("✔ Road Network loaded and stored in sim$RoadNetwork")
+  }
   
   ## ---------------------------------------------------------
   ## 5) Hydrology (NHN – LOAD ONLY)
