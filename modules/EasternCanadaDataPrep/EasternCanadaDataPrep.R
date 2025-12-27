@@ -20,8 +20,15 @@ defineModule(sim, list(
     #defineParameter("paramName", "paramClass", value, min, max, "parameter description"),
     defineParameter(".plots", "character", "screen", NA, NA,
                     "Used by Plots function, which can be optionally used here"),
-    defineParameter(".plotInitialTime", "numeric", start(sim), NA, NA,
-                    "Describes the simulation time at which the first plot event should occur."),
+    defineParameter(
+      ".plotInitialTime",
+      "numeric",
+      NA,
+      NA,
+      NA,
+      "Simulation time at which the first plot event should occur"
+    ),
+    
     defineParameter(".plotInterval", "numeric", NA, NA, NA,
                     "Describes the simulation time interval between plot events."),
     defineParameter(".saveInitialTime", "numeric", NA, NA, NA,
@@ -39,7 +46,7 @@ defineModule(sim, list(
     
     ## ---- model parameters (YOUR logic) ----
     defineParameter(
-      "hydroBuffer_m",
+      "riparianBuffer_m",
       "numeric",
       30,
       0,
@@ -61,7 +68,16 @@ defineModule(sim, list(
       NA,
       NA,
       "FMU name for which HLB should be built (e.g. 'Temagami Forest')"
+    ),
+    defineParameter(
+      "hydroRaster_m",
+      "numeric",
+      100,
+      30,
+      1000,
+      "Resolution (m) of hydrology raster template"
     )
+    
   ),
   inputObjects = bindrows(
     #expectsInput("objectName", "objectClass", "input object description", sourceURL, ...),
@@ -77,9 +93,27 @@ defineModule(sim, list(
     expectsInput("FMU",objectClass = c("sf", "SpatVector"), desc = "Forest Management Units — generated inside this module",sourceURL = NA)
   ),
   outputObjects = bindrows(
-    #createsOutput("objectName", "objectClass", "output object description", ...),
-    createsOutput(objectName = "EasternCanadaLandbase", objectClass = "list", desc = "A list containing all processed and clipped layers (FMU, CPCAD, Hydrology, Landcover) for Eastern Canada.")
+    
+    createsOutput(
+      objectName = "EasternCanadaLandbase",
+      objectClass = "list",
+      desc = "A list containing assembled spatial layers for Eastern Canada (FMU, CPCAD, Hydrology, LandCover, and optional HLB)."
+    ),
+    
+    createsOutput(
+      objectName = "PlanningRaster",
+      objectClass = "SpatRaster",
+      desc = "Planning raster used for landbase accounting and downstream AAC calculations."
+    ),
+    
+    createsOutput(
+      objectName = "LandbaseTable",
+      objectClass = "data.frame",
+      desc = "Cell-based landbase accounting table with effective harvestable area after protection and riparian constraints."
+    )
+    
   )
+  
 ))
 
 ### template initialization
@@ -88,7 +122,24 @@ doEvent.EasternCanadaDataPrep <- function(sim, eventTime, eventType) {
     eventType,
     
     init = {
-      sim <- scheduleEvent(sim, time(sim), "EasternCanadaDataPrep", "buildLandbase")
+      sim <- scheduleEvent(
+        sim,
+        time(sim),
+        "EasternCanadaDataPrep",
+        "buildLandbaseRaster"
+      )
+    },
+    
+    
+    buildLandbaseRaster = {
+      sim <- buildLandbaseRaster(sim)
+      
+      sim <- scheduleEvent(
+        sim,
+        time(sim),
+        "EasternCanadaDataPrep",
+        "buildLandbase"
+      )
     },
     
     buildLandbase = {
@@ -100,6 +151,7 @@ doEvent.EasternCanadaDataPrep <- function(sim, eventTime, eventType) {
   
   return(invisible(sim))
 }
+
 ### template for save events
 #Save <- function(sim) {
 # ! ----- EDIT BELOW ----- ! #
@@ -142,6 +194,121 @@ doEvent.EasternCanadaDataPrep <- function(sim, eventTime, eventType) {
 # ! ----- STOP EDITING ----- ! #
 # return(invisible(sim))
 #}
+# NOTE:
+# This function builds a quantitative landbase accounting layer.
+# It intentionally excludes age, yield curves, and AAC logic,
+# which are handled in downstream modules.
+# Builds a coarse-resolution planning raster and a cell-based landbase
+# accounting table (m2), excluding age, yields, and AAC logic.
+
+buildLandbaseRaster <- function(sim) {
+  
+  message("🔵 Building planning raster & landbase accounting table...")
+  
+  ## -----------------------------
+  ## sanity checks
+  ## -----------------------------
+  if (is.null(sim$LandCover))
+    stop("LandCover is required for planning raster.")
+  
+  if (is.null(sim$Hydrology$riparianFraction))
+    stop("Hydrology riparianFraction is missing.")
+  
+  ## -----------------------------
+  ## inputs
+  ## -----------------------------
+  landcover <- sim$LandCover
+  fmu       <- sim$FMU
+  cpcad     <- sim$CPCAD
+  riparian  <- sim$Hydrology$riparianFraction
+  
+  res_m <- P(sim)$hydroRaster_m
+  
+  ## -----------------------------
+  ## 1) planning raster
+  ## -----------------------------
+  planning <- terra::rast(
+    terra::ext(terra::vect(sim$studyArea)),
+    resolution = res_m,
+    crs = terra::crs(landcover)
+  )
+  
+  values(planning) <- NA
+  
+  sim$PlanningRaster <- planning
+  
+  ## -----------------------------
+  ## 2) rasterize FMU
+  ## -----------------------------
+  fmu_r <- terra::rasterize(
+    fmu,
+    planning,
+    field = "FM_UNIT_NAME"
+  )
+  
+  ## -----------------------------
+  ## 3) rasterize CPCAD (protected)
+  ## -----------------------------
+  prot_r <- terra::rasterize(
+    cpcad,
+    planning,
+    field = 1,
+    background = 0
+  )
+  
+  ## -----------------------------
+  ## 4) align riparian fraction
+  ## -----------------------------
+  rip_r <- terra::resample(
+    riparian,
+    planning,
+    method = "bilinear"
+  )
+  
+  ## -----------------------------
+  ## 5) build accounting table
+  ## -----------------------------
+  df <- data.frame(
+    FMU = terra::values(fmu_r),
+    protected = terra::values(prot_r),
+    riparian_frac = terra::values(rip_r)
+  )
+  
+  df <- df[!is.na(df$FMU), ]
+  
+  ## cell area in m2
+  cell_area <- prod(terra::res(planning))
+  
+  df$cell_area <- cell_area
+  
+  ## sanitize riparian fraction
+  rip <- df$riparian_frac
+  rip[is.na(rip)] <- 0
+  rip <- pmin(pmax(rip, 0), 1)
+  
+  ## effective harvestable area per cell (m2)
+  df$effective_area <- ifelse(
+    df$protected == 1,
+    0,
+    cell_area * (1 - rip)
+  )
+  
+  
+  sim$LandbaseTable <- df
+  
+  message("✔ Landbase raster & accounting table created")
+  if (any(df$effective_area < 0)) {
+    stop("Negative effective_area detected — check riparian fraction logic.")
+  }
+  
+  message(
+    "ℹ️ Mean effective area per cell (ha): ",
+    round(mean(df$effective_area) / 10000, 3)
+  )
+  
+  return(invisible(sim))
+}
+############################
 buildLandbase <- function(sim) {
   
   message("🔵 Building Eastern Canada Landbase...")
@@ -166,7 +333,9 @@ buildLandbase <- function(sim) {
       CPCAD     = cpcad,
       FMU       = fmu,
       Hydrology = sim$Hydrology,
-      HLB       = NULL
+      PlanningRaster  = sim$PlanningRaster,
+      LandbaseTable   = sim$LandbaseTable,
+      HLB             = NULL
     )
     
     message("✔ Eastern Canada Landbase created (NO HLB).")
@@ -191,13 +360,9 @@ buildLandbase <- function(sim) {
   ## ---------------------------------------------------------
   ## Build HLB
   ## ---------------------------------------------------------
+  # NOTE: Hydrology effects are applied later at the raster-based AAC stage
   cpcad_i <- terra::intersect(cpcad, fmu_i)
   hlb <- terra::erase(fmu_i, cpcad_i)
-  
-  hlb <- terra::erase(hlb, sim$Hydrology$buffered$flowline)
-  hlb <- terra::erase(hlb, sim$Hydrology$buffered$watercourse)
-  hlb <- terra::erase(hlb, sim$Hydrology$buffered$waterbody)
-  
   ## ---------------------------------------------------------
   ## SAVE HLB TO DISK  👈👈 اینجاست
   ## ---------------------------------------------------------
@@ -374,9 +539,7 @@ buildLandbase <- function(sim) {
       projectTo = studyArea
     )
   }
-  ## ---------------------------------------------------------
-  ## 5) Hydrology (NHN – SAFE MODE)
-  ## ---------------------------------------------------------
+ 
   ## ---------------------------------------------------------
   ## 4.5) Road Network (RNF – Statistics Canada, 2011)
   ## ---------------------------------------------------------
@@ -404,71 +567,80 @@ buildLandbase <- function(sim) {
   }
   
   ## ---------------------------------------------------------
-  ## 5) Hydrology (NHN – LOAD ONLY)
+  ## ---------------------------------------------------------
+  ## Hydrology – HydroRIVERS (PRODUCTION SAFE)
   ## ---------------------------------------------------------
   
-  if (is.null(sim$Hydrology)) {
+  if (!suppliedElsewhere("Hydrology", sim)) {
     
-    message("▶ Loading prepared Hydrology layers...")
+    message("▶ Preparing Hydrology from HydroRIVERS...")
     
     hydro_dir <- file.path(dPath, "Hydrology")
+    dir.create(hydro_dir, recursive = TRUE, showWarnings = FALSE)
     
-    ## 1) Extract only (NO LOAD)
-    Cache(
+    ## 1) Load HydroRIVERS (vector)
+    streams <- Cache(
       prepInputs,
-      url = "https://drive.google.com/uc?export=download&id=1_isixvFVMAUThrt8r6gQ6T1lJWLMM3Mh",
+      url = "https://data.hydrosheds.org/file/HydroRIVERS/HydroRIVERS_v10_na_shp.zip",
       destinationPath = hydro_dir,
-      archive = "ONTARIO_FMU.zip",
-      overwrite = FALSE,
-      purge = 7,
-      fun = NULL
+      archive = "HydroRIVERS_v10_na_shp.zip",
+      targetFile = "HydroRIVERS_v10_na_shp/HydroRIVERS_v10_na.shp",
+      fun = terra::vect,
+      cropTo = studyArea,
+      projectTo = studyArea
     )
     
-    ## 2) Load prepared vectors
-    flowline <- terra::vect(
-      file.path(hydro_dir, "ONTARIO_FMU", "FLOWLiNE_FMUs.shp")
+    ## 2) Buffer streams
+    buf_m <- P(sim)$riparianBuffer_m
+    streams_buf <- terra::buffer(streams, width = buf_m)
+    
+    ## 3) CREATE COARSE TEMPLATE (KEY FIX)
+    hydro_res <- P(sim)$hydroRaster_m
+    
+    ## 3) CREATE COARSE TEMPLATE
+    template <- terra::rast(
+      terra::ext(terra::vect(studyArea)),
+      resolution = hydro_res,
+      crs = terra::crs(sim$LandCover)
     )
     
-    watercourse <- terra::vect(
-      file.path(hydro_dir, "ONTARIO_FMU", "Watercourse_FMUs.shp")
+    ## 🔴🔴🔴 THIS IS THE CRITICAL FIX 🔴🔴🔴
+    values(template) <- 0
+    
+    
+    
+    # rasterize buffer: area-weighted
+    riparian_area <- terra::rasterize(
+      streams_buf,
+      template,
+      fun = "sum",
+      background = 0
     )
     
-    waterbody <- terra::vect(
-      file.path(hydro_dir, "ONTARIO_FMU", "WaterBodyEasternOntario.shp")
-    )
+    # cell area (m²)
+    cell_area <- prod(res(template))
     
-    ## 3) Reproject ONLY (no crop)
-    targetCRS <- sf::st_crs(studyArea)$wkt
+    # fraction
+    riparian_frac <- riparian_area / cell_area
+    riparian_frac[riparian_frac > 1] <- 1
     
-    flowline    <- terra::project(flowline, targetCRS)
-    watercourse <- terra::project(watercourse, targetCRS)
-    waterbody   <- terra::project(waterbody, targetCRS)
     
-    ## 4) Apply buffer (using module parameter)
-    buf <- as.numeric(sim$hydroBuffer_m)
-    if (length(buf) == 0 || is.na(buf)) buf <- 30
     
-    flowline_buf    <- terra::buffer(flowline,    width = buf)
-    watercourse_buf <- terra::buffer(watercourse, width = buf)
-    waterbody_buf   <- terra::buffer(waterbody,   width = buf)
-    
-    ## 5) Store raw + buffered hydrology in sim
+    ## 5) Store hydrology
     sim$Hydrology <- list(
-      raw = list(
-        flowline    = flowline,
-        watercourse = watercourse,
-        waterbody   = waterbody
-      ),
-      buffered = list(
-        flowline    = flowline_buf,
-        watercourse = watercourse_buf,
-        waterbody   = waterbody_buf
-      )
+      source = "HydroRIVERS_v10_na",
+      buffer_m = buf_m,
+      raster_m = hydro_res,
+      riparianFraction = riparian_frac
     )
     
-    message("✔ Hydrology loaded and buffered.")
     
+    message(
+      "✔ Hydrology riparian fraction created (",
+      hydro_res, " m resolution)"
+    )
   }
+  
   
   # ! ----- STOP EDITING ----- ! #
   return(invisible(sim))
