@@ -2,147 +2,207 @@
 
 # EasternCanadaDataPrep
 
-Prepare and standardize all spatial layers required for the Eastern Canada landbase.  
-This SpaDES module downloads, processes, crops, masks, filters, and reprojects datasets such as protected areas (CPCAD), land cover (LandCover, supplied upstream), forest management units (FMUs), and study area boundaries.
+**EasternCanadaDataPrep** is a SpaDES module that constructs a **raster-based landbase accounting framework** for Eastern Canada, defining where harvesting is **legally and physically possible**, independent of forest composition or management decisions.
 
-This module is part of the **Eastern Canada Landbase Preparation Pipeline**, supporting downstream models including **LandR**, **AAC calculation**, **SimpleHarvest**, and **classification modules**.
+This module prepares and harmonizes core spatial constraints—Forest Management Units (FMUs), protected and conserved areas (CPCAD), and hydrology-derived riparian influence—and produces a coarse-resolution planning raster and a cell-based landbase accounting table.
+
+The outputs are designed to be consumed directly by downstream modules such as **LandR**, **AAC calculation**, and harvest allocation or scheduling modules.
 
 ---
 
 ## 🌎 Purpose
 
-The goal of this module is to create a **clean, harmonized, and analysis-ready landbase** for Eastern Canada.  
-It ensures all spatial datasets:
+The purpose of this module is to answer a single, well-defined question:
 
-- share the same CRS (EPSG:5070 — NAD83 / Conus Albers)
-- are correctly clipped to the study area  
-- are masked, filtered, and cleaned  
-- follow consistent naming and file formats  
-- are ready for use in other SpaDES modules  
+> **Where is harvesting legally and physically allowed, and how much effective area is available, before applying any forest-type, age, or management rules?**
+
+To achieve this, the module:
+
+- Defines a consistent study area for Eastern Canada  
+- Harmonizes all spatial layers to a common projection  
+- Applies legal constraints (protected and conserved areas)  
+- Applies physical constraints (riparian influence)  
+- Produces a raster-based planning framework and a transparent accounting table  
+
+This module intentionally **does not**:
+- Interpret land cover or forest type  
+- Apply silvicultural or management rules  
+- Classify forest attributes  
+- Construct vector-based harvest blocks  
+
+---
+
+## 🧭 Spatial Reference System
+
+All spatial outputs are harmonized to:
+
+**Canada Albers Equal Area Conic**  
+**ESRI:102001**
 
 ---
 
 ## 📦 Input Objects
 
-The module accepts the following inputs (may be provided externally or created inside the module):
+The module expects or generates the following input objects:
 
-| Object      | Class            | Description                                   |
-|-------------|------------------|-----------------------------------------------|
-| `studyArea` | sf / SpatVector  | Polygon defining the modeling area           |
-| `LandCover` | SpatRaster | Land cover raster (provided by upstream module) |
-| `CPCAD`     | sf / SpatVector  | Protected areas                               |
-| `FMU`       | sf / SpatVector  | Forest Management Units                       |
+| Object       | Class              | Description |
+|--------------|--------------------|-------------|
+| `studyArea`  | `sf` / `SpatVector` | Polygon defining the modeling extent |
+| `FMU`        | `sf` / `SpatVector` | Forest Management Unit boundaries |
+| `CPCAD`      | `sf` / `SpatVector` | Protected and conserved areas |
+| `Hydrology`  | `list`              | Hydrology-derived riparian fraction raster |
 
-If not provided, `studyArea` can be auto-generated (default: ON, QC, NB, NS, PEI, NL).
+If not provided by the user, all inputs are **automatically created or downloaded** inside `.inputObjects()`.
 
 ---
 
-## 🔌 External Interfaces
-
-### LandCover (required upstream input)
-
-EasternCanadaDataPrep does **not** generate land cover data.  
-Instead, it expects a categorical **LandCover** raster to be supplied
-by an upstream module (e.g. LandR, FireSense, or a dedicated LandCover module).
-
-**Interface contract:**
-
-- Object name: `sim$LandCover`
-- Class: `terra::SpatRaster`
-- Resolution: finer than the planning resolution (default 250 m)
-- Values: categorical land-cover classes (e.g. forest / non-forest)
-- CRS: must be projectable to the FMU and study area CRS
-
-**Scope and limitations:**
-
-This module:
-- uses LandCover only to construct a 250 m planning raster (majority rule)
-- does **not** reclassify land-cover types
-- does **not** interpret forest type, merchantability, or age
-
-All semantic interpretation of land cover is intentionally deferred
-to downstream classification and AAC modules.
-
 ## 🛠 What the module does
 
-### ✔ Downloads (optional via `prepInputs()`)
-- CPCAD 2024 (via Google Drive link)
-- FMU boundaries (Canada-wide)
+### ✔ Study Area
+If no study area is provided, the module automatically constructs a default
+Eastern Canada study area including:
 
-### ✔ Filters CPCAD  
-Removes:
-- STATUS: Proposed (3), Delisted (5)  
-- PA_OECM_DF: Proposed (4), Delisted (5)  
-- IUCN categories outside 1–7  
+- Ontario  
+- Québec  
+- New Brunswick  
+- Nova Scotia  
+- Prince Edward Island  
+- Newfoundland and Labrador  
 
-### ✔ Preprocesses FMUs  
-- Clips to studyArea  
-- Reprojects to EPSG:5070  
+---
 
-### ✔ Prepares land cover (if provided)  
-- Crops, masks, reprojects  
+### ✔ Forest Management Units (FMUs)
 
-### ✔ Builds unified landbase object  
+FMUs are:
+- Downloaded (Canada-wide)
+- Cropped and masked to the study area
+- Reprojected to ESRI:102001
+- Rasterized to the planning resolution
 
-Creates a unified landbase object including:
+FMUs define the **administrative units** for landbase accounting.
 
-```r
-sim$EasternCanadaLandbase <- list(
-  PlanningRaster = <SpatRaster>,
-  LandbaseTable  = <data.frame>,
-  CPCAD          = <sf>,
-  FMU            = <sf>
-)
-```
-A clean, consistent spatial bundle for downstream simulation modules.
+---
+
+### ✔ Protected and Conserved Areas (CPCAD)
+
+Protected areas are derived from the **Canadian Protected and Conserved Areas Database (CPCAD)**.
+
+Processing includes:
+- Cropping and masking to the study area
+- Reprojection to ESRI:102001
+- Policy-level filtering (no ecological interpretation)
+
+Filtered CPCAD areas represent **legal exclusions** from harvesting.
+
+---
+
+### ✔ Hydrology – Riparian Influence
+
+Hydrology is represented as a **wall-to-wall raster of riparian influence**, not as raw vector hydrology.
+
+Processing workflow:
+1. HydroRIVERS flowlines are downloaded and cropped
+2. A uniform buffer is applied (`riparianBuffer_m`)
+3. Buffered streams are rasterized to a coarse template (`hydroRaster_m`)
+4. A **riparian fraction raster** is produced
+
+Each cell value represents the **fraction of the cell area influenced by riparian buffers**, with values in `[0, 1]`.
+
+This representation is:
+- Scalable
+- Memory-efficient
+- Directly compatible with raster-based models
+
+---
+
+## 🧮 Planning Raster and Landbase Accounting
+
+### Planning Raster
+
+The planning raster is a **coarse-resolution (default: 250 m)** raster defining
+the spatial units used for accounting and downstream modeling.
+
+It is constructed from:
+- Study area extent
+- FMU geometry
+- A fixed target resolution
+
+No land-cover or forest information is used at this stage.
+
+---
+
+### Harvestable Mask
+
+A binary harvestable mask is created where:
+
+- Cells fall inside an FMU, **and**
+- Cells are **not** inside protected areas
+
+This mask represents **legal availability only**.
+
+---
+
+### Landbase Accounting Table
+
+A transparent, cell-based accounting table is constructed for all harvestable cells.
+
+For each planning cell, the table records:
+
+- FMU identifier  
+- Cell area (m²)  
+- Riparian fraction (0–1)  
+- Effective harvestable area after riparian constraint  
+
+This table enables reproducible, auditable area calculations without repeated raster processing.
+
+---
 
 ## 📤 Output Objects
 
-| Output Name              | Type | Description                                  |
-|--------------------------|------|----------------------------------------------|
-| `EasternCanadaLandbase`  | list | Harmonized landbase layers (planning raster, landbase table, FMU, CPCAD) |
+| Output Name | Type | Description |
+|------------|------|-------------|
+| `PlanningRaster` | `SpatRaster` | Coarse-resolution planning raster |
+| `LandbaseTable` | `data.frame` | Cell-based landbase accounting table |
+| `EasternCanadaLandbase` | `list` | Structured container of all landbase products |
+
+The main landbase object has the form:
+
+```r
+sim$EasternCanadaLandbase <- list(
+  PlanningRaster   = <SpatRaster>,
+  FMU_raster       = <SpatRaster>,
+  HarvestableMask  = <SpatRaster>,
+  RiparianFraction = <SpatRaster>,
+  LandbaseTable    = <data.frame>
+)
 
 
-📚 Documentation
-Full module documentation is available in:
 
-Copy code
-EasternCanadaDataPrep.Rmd
-This includes:
+🔗 Relationship to Other Modules
 
-module summary
+EasternCanadaDataPrep provides foundational spatial constraints for:
 
-inputs/outputs tables
+LandR forest dynamics and biomass modules
 
-event descriptions
+Allowable Annual Cut (AAC) calculation modules
 
-saving/plotting behavior
+Harvest scheduling and allocation modules
 
-acknowledgment + citations
+Forest classification and yield-curve assignment modules
 
-🧩 Related Modules
-This module feeds into:
-
-LandR Biomass (pixel-group initialization)
-
-AAC Calculator (yield curves + harvestable landbase)
-
-SimpleHarvest / block-based harvest
-
-Forest classification / yield-curve assignment
+This module must be run before any forest dynamics or harvest simulation.
 
 🤝 Getting Help
-For questions, issues, or feature requests:
 
-➡ GitHub Issues:
+For issues, feature requests, or questions:
+
+GitHub Issues:
 https://github.com/shirinvark/EasternCanadaDataPrep/issues
 
-➡ SpaDES Help (Zulip):
-https://spades.zulipchat.com
-
-➡ SpaDES Documentation:
+SpaDES Documentation:
 https://spades-core.predictiveecology.org
 
 © Author
-Shirin Varkouhi (Université Laval)
-Contact: shirin.varkuhi@gmail.com
+Shirin Varkouhi
+Université Laval
+📧 shirin.varkuhi@gmail.com
