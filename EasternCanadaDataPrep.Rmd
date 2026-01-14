@@ -1,0 +1,283 @@
+---
+title: "EasternCanadaDataPrep Manual"
+subtitle: "Eastern Canada spatial data preparation"
+date: "Last updated: 2025-12-15"
+output:
+  bookdown::html_document2:
+    toc: true
+    toc_float: true
+    theme: sandstone
+    number_sections: false
+---
+
+# EasternCanadaDataPrep Module
+
+EasternCanadaDataPrep is a SpaDES module designed to assemble and standardize
+foundational spatial datasets required for forest landscape modelling in
+Eastern Canada.
+
+This module focuses on **data preparation only** and intentionally avoids
+generating land-cover or forest-inventory products internally.
+
+---
+
+## Module purpose
+
+The purpose of this module is to construct a harmonized spatial landbase that
+can be reused by multiple downstream modules, including LandR, AAC calculation,
+and harvest allocation modules.
+
+The module performs the following tasks:
+
+- Defines a consistent study area for Eastern Canada  
+- Loads and prepares Forest Management Units (FMUs)  
+- Loads, filters, and standardizes protected and conserved areas (CPCAD)  
+- Derives a wall-to-wall raster representation of riparian influence  
+- Loads and standardizes road network data  
+- Optionally derives legacy vector-based Harvestable Land Base products (development use only)
+
+All spatial layers are harmonized to a common projection:
+
+**Canada Albers Equal Area Conic (ESRI:102001)**
+
+---
+
+## External dependencies
+
+### Land cover
+
+Land cover is treated as a strict **upstream dependency**.
+
+This module does **not** download, preprocess, reclassify, or interpret
+land-cover data. Instead, a categorical land-cover raster must be supplied
+by an upstream module (e.g., LandR, FireSense, or a dedicated LandCover module).
+
+Expected land-cover input:
+
+- Object name: `sim$LandCover`
+- Data type: `terra::SpatRaster`
+- Projection: ESRI:102001
+- Resolution: finer than the planning resolution (default 250 m)
+
+Land cover is used **exclusively** to construct a coarse-resolution
+planning raster via spatial aggregation (majority rule).
+
+If no land-cover raster is supplied, the module will stop with an error,
+as construction of the planning raster requires land-cover information.
+
+---
+
+## Protected and conserved areas (CPCAD)
+
+Protected and conserved areas are derived from the Canadian Protected and
+Conserved Areas Database (CPCAD).
+
+The CPCAD layer is cropped, masked, and reprojected to the study area and then
+filtered to retain only areas relevant for landbase construction.
+
+Filtering rules applied include:
+
+- Retention of designated protected areas and OECMs  
+- Removal of proposed and delisted areas  
+- Retention of IUCN categories I through VII  
+
+The resulting CPCAD layer represents areas excluded from harvest and is used
+as a constraint in raster-based landbase accounting and optional legacy HLB construction.
+
+---
+
+## Forest Management Units (FMUs)
+
+Forest Management Units are loaded as vector polygons and harmonized to the
+study-area extent and projection.
+
+FMUs serve as the spatial units for which landbase accounting and
+(optional legacy) harvestable land bases may be constructed and analysed.
+
+---
+
+## Hydrology (Riparian Influence)
+
+Hydrology in this module is implemented as a **wall-to-wall, raster-based representation of riparian influence**, rather than as raw hydrological features (e.g., rivers, lakes, or flowlines).
+
+The objective is not to represent hydrological networks explicitly, but to capture their **spatial effect on surrounding land** in a scalable and model-ready form.
+
+### Motivation and design rationale
+
+Direct use of national hydrological vector datasets (e.g., NHN flowlines, waterbodies, and watercourses) was deemed unsuitable for regional to national modelling because they are:
+
+- Extremely large and memory-intensive
+- Geometrically complex (e.g., curves, multipart features)
+- Difficult to scale within a SpaDES workflow
+- Poorly aligned with raster-based downstream models
+
+Following project discussions, hydrology is therefore represented **by its influence on land area**, rather than by the original vector features.
+
+### Data source
+
+Riparian influence is derived from **HydroRIVERS (HydroSHEDS)**, a globally consistent, wall-to-wall river network dataset.
+The North America subset is used to cover Eastern Canada.
+
+HydroRIVERS is used solely as an intermediate input to derive riparian influence and is not retained as a final output.
+
+### Processing workflow
+
+Hydrology is processed during `.inputObjects()` as follows:
+
+1. HydroRIVERS flowlines are loaded and cropped to the Eastern Canada study area.
+2. A uniform buffer is applied to all stream lines using a user-defined distance (`riparianBuffer_m`).
+3. A coarse, wall-to-wall raster template is created at a configurable resolution (`hydroRaster_m`).
+4. Buffered stream features are rasterized onto the template, producing a **riparian fraction raster**.
+
+Each pixel value represents the **fraction of pixel area** influenced by buffered hydrological features.
+
+### Output object
+
+The final hydrology product is stored as a lightweight list:
+
+```r
+sim$Hydrology <- list(
+  source = "HydroRIVERS_v10_na",
+  buffer_m = <buffer distance in meters>,
+  raster_m = <raster resolution in meters>,
+  riparianFraction = <SpatRaster>
+)
+```
+**Where:**
+
+- `riparianFraction` is a `SpatRaster` with values in the range **[0, 1]**
+- Most pixels have a value of **0**
+- Non-zero values occur only in proximity to streams
+- Small values reflect partial pixel overlap with riparian buffers
+
+
+
+### Intended use and downstream integration
+This representation is designed to:
+
+- Support wall-to-wall regional and national modelling
+- Integrate directly with raster-based forest landscape models (e.g., LandR)
+- Allow fast cropping and masking without recomputation
+- Avoid repeated handling of large hydrological vector datasets
+
+Hydrological effects on harvest, habitat suitability, or ecological processes are expected to be applied downstream using this fractional raster representation.
+
+## Planning raster and landbase accounting
+
+The core output of this module is a **coarse-resolution planning raster**
+used for landbase accounting and downstream harvest calculations.
+
+### Planning raster
+
+The planning raster is derived by:
+
+1. Projecting the upstream land-cover raster to the FMU CRS
+2. Aggregating land-cover classes to a target resolution (default: 250 m)
+   using a majority (modal) rule
+3. Masking the raster to Forest Management Units
+
+The resulting raster defines the spatial units used for landbase accounting
+and AAC calculations.
+
+### Landbase accounting table
+
+A cell-based landbase accounting table is constructed by combining:
+
+- Planning raster cells
+- Forest Management Unit membership
+- Protected area overlap
+- Riparian influence (fractional)
+
+For each planning cell, the table records:
+
+- FMU identifier
+- Cell area (m²)
+- Riparian fraction (0–1)
+- Effective harvestable area after constraints
+
+This tabular representation enables transparent and reproducible
+area-based calculations without repeated raster processing.
+
+
+## Road network (RNF)
+
+Road network data are derived from the **Road Network File (RNF), Statistics
+Canada (2011)**.
+
+In the current implementation, the road network is:
+
+- Downloaded from Statistics Canada  
+- Loaded as vector line features  
+- Cropped and masked to the study area  
+- Reprojected to ESRI:102001  
+
+No additional filtering, classification, or rasterization of roads is performed
+within this module.
+
+The road network is included to ensure that transportation infrastructure is
+available for downstream modules that may require it, such as:
+
+- Access and operability modelling  
+- Harvest planning and allocation  
+- Road-density or fragmentation analyses  
+
+All further processing of road data (e.g., buffering, rasterization, weighting)
+is intentionally deferred to downstream modules (e.g., LandR or harvest-related
+modules).
+
+---
+
+## Harvestable Land Base (HLB) — legacy / optional
+This functionality is retained for development and validation purposes only.
+The primary landbase representation in this module is raster-based.
+The construction of a Harvestable Land Base is optional.
+
+When enabled, the HLB is constructed for a single user-specified FMU by:
+
+- Starting from the FMU boundary  
+- Removing protected and conserved areas  
+- Removing buffered hydrology features  
+
+The resulting HLB is a vector polygon representing potentially harvestable land.
+
+For development and validation purposes, the HLB is written to disk as a
+GeoPackage file.
+
+---
+
+## Module output
+The primary output of the module is a structured landbase object containing
+raster-based planning and accounting products.
+
+The landbase includes:
+
+- Planning raster (coarse-resolution spatial units)
+- Landbase accounting table (cell-based areas and constraints)
+- Forest Management Units
+- Protected and conserved areas
+- Hydrology (riparian fraction raster)
+- Road network (vector)
+
+This landbase object is intended to be consumed directly by downstream
+classification, AAC, and harvest modules.
+
+
+---
+
+## Relationship to other modules
+
+EasternCanadaDataPrep provides the foundational spatial layers required by:
+
+- LandR biomass and forest dynamics modules  
+- Allowable Annual Cut (AAC) calculation modules  
+- Harvest scheduling and allocation modules  
+- Forest classification and yield-curve assignment modules  
+
+This module must be run before any forest dynamics or harvest simulations.
+
+---
+
+## Getting help
+
+For issues, feature requests, or questions, please use the project repository
+or SpaDES documentation resources.
