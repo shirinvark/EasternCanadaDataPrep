@@ -6,7 +6,7 @@
 ## If exact location is required, functions will be: `sim$.mods$<moduleName>$FunctionName`.
 defineModule(sim, list(
   name = "EasternCanadaDataPrep",
-  description = "Cell-based landbase accounting table defining effective harvestable area after legal (protected areas) and riparian constraints.",
+  description = "Loads and prepares spatial inputs (FMUs, protected areas, hydrology) for downstream landbase and harvesting analyses.",
   keywords = c("Eastern Canada", "Data Prep", "FMU", "CPCAD", "Hydrology"),
   authors = structure(list(list(given = c("Shirin", "Middle"), family = "Varkouhi", role = c("aut", "cre"), email = "shirin.varkuhi@gmail.com", comment = NULL)), class = "person"),
   childModules = character(0),
@@ -44,24 +44,6 @@ defineModule(sim, list(
     defineParameter(".useCache", "logical", FALSE, NA, NA,
                     "Should caching of events or module be used?"),
     
-    ## ---- model parameters (YOUR logic) ----
-    defineParameter(
-      "riparianBuffer_m",
-      "numeric",
-      30,
-      0,
-      500,
-      "Buffer distance (m) for hydrology features (flowline, watercourse, waterbody)"
-    ),
-    defineParameter(
-      "hydroRaster_m",
-      "numeric",
-      250,
-      250,
-      250,
-      "Resolution (m) of hydrology raster template"
-    )
-    
   ),
   inputObjects = bindrows(
     #expectsInput("objectName", "objectClass", "input object description", sourceURL, ...),
@@ -71,10 +53,9 @@ defineModule(sim, list(
     expectsInput(
       "Hydrology",
       objectClass = "list",
-      desc = "Hydrology data including riparianFraction raster",
+      desc = "hydrology raw (streams)",
       sourceURL = NA
     )
-    
   ),
   outputObjects = bindrows(
     
@@ -83,17 +64,16 @@ defineModule(sim, list(
       objectClass = "list",
       desc = "A list containing spatial constraints and derived landbase products for Eastern Canada."
     ),
+    createsOutput(
+      objectName  = "Provinces",
+      objectClass = c("sf", "SpatVector"),
+      desc        = "Canadian provincial boundaries (ON, QC, NB, NS, PE, NL) cropped to study area"
+    ),
     
     createsOutput(
       objectName = "PlanningRaster",
       objectClass = "SpatRaster",
       desc = "Planning raster used for landbase accounting and downstream AAC calculations."
-    ),
-    
-    createsOutput(
-      objectName = "LandbaseTable",
-      objectClass = "data.frame",
-      desc = "Cell-based landbase accounting table with effective harvestable area after protection and riparian constraints."
     )
     
   )
@@ -105,17 +85,17 @@ doEvent.EasternCanadaDataPrep <- function(sim, eventTime, eventType) {
     eventType,
     
     init = {
-      message("🔵 init: building landbase")
-      sim <- buildLandbaseRaster(sim)
-    }
-    ,
+      message("🔵 init: building planning grid")
+      sim <- buildPlanningGrid(sim)
+      sim <- buildProvinces(sim)   # 👈 این خط
+    },
     
     warning(noEventWarning(sim))
   )
   return(invisible(sim))
 }
 
-buildLandbaseRaster <- function(sim) {
+buildPlanningGrid <- function(sim) {
   
   message("🔵 Building planning raster & landbase accounting table...")
   
@@ -128,26 +108,20 @@ buildLandbaseRaster <- function(sim) {
   if (is.null(sim$CPCAD))
     stop("CPCAD is missing.")
   
-  if (is.null(sim$Hydrology$riparianFraction))
-    stop("Hydrology riparianFraction is missing.")
-  
   ## -----------------------------
   ## inputs
   ## -----------------------------
   fmu      <- sim$FMU
   cpcad    <- sim$CPCAD
-  riparian <- sim$Hydrology$riparianFraction
-  
-  res_m <- P(sim)$hydroRaster_m
-  
   ## -----------------------------
   ## 1) planning raster (NO land cover)
   ## -----------------------------
   planning <- terra::rast(
     sim$studyArea,
-    resolution = res_m,
+    resolution = 250,
     crs = terra::crs(fmu)
   )
+  
   values(planning) <- NA
   
   sim$PlanningRaster <- planning
@@ -167,11 +141,13 @@ buildLandbaseRaster <- function(sim) {
     cpcad <- terra::project(cpcad, planning)
   }
   
+  # Raster–polygon assignment uses the center-of-pixel rule:
+  # a cell is assigned to an FMU only if its cell center falls within the FMU polygon.
   fmu_r <- terra::rasterize(
     fmu,
     planning,
     field = "FMU_ID",
-    touches = TRUE
+    touches = FALSE
   )
   
   if (all(is.na(terra::values(fmu_r)))) {
@@ -206,19 +182,6 @@ buildLandbaseRaster <- function(sim) {
   )
   
   ## -----------------------------
-  ## 5) align riparian fraction
-  ## -----------------------------
-  rip_r <- terra::project(
-    riparian,
-    planning,
-    method = "bilinear"
-  )
-  
-  rip_r[rip_r < 0] <- 0
-  rip_r[rip_r > 1] <- 1
-  rip_r[is.na(rip_r)] <- 0
-  
-  ## -----------------------------
   ## diagnostics
   ## -----------------------------
   message("---- DIAGNOSTIC CHECK ----")
@@ -227,38 +190,6 @@ buildLandbaseRaster <- function(sim) {
   message("Protected cells = ", sum(terra::values(prot_r) == 1, na.rm = TRUE))
   message("---- END DIAGNOSTIC ----")
   
-  ## -----------------------------
-  ## 6) landbase accounting table
-  ## -----------------------------
-  harv_vals <- terra::values(harvestable_mask)
-  
-  idx <- harv_vals == 1
-  
-  if (sum(idx, na.rm = TRUE) == 0) {
-    stop("No harvestable cells remain after constraints.")
-  }
-  
-  
-  
-  cell_area <- prod(terra::res(planning))  # m2
-  
-  df <- data.frame(
-    FMU               = terra::values(fmu_r)[idx],
-    riparian_fraction = terra::values(rip_r)[idx]
-  )
-  
-  df$riparian_fraction[is.na(df$riparian_fraction)] <- 0
-  df$riparian_fraction <- pmin(pmax(df$riparian_fraction, 0), 1)
-  
-  df$cell_area_m2   <- cell_area
-  df$effective_area <- cell_area * (1 - df$riparian_fraction)
-  
-  sim$LandbaseTable <- df
-  
-  message(
-    "✔ LandbaseTable created | mean effective area (ha): ",
-    round(mean(df$effective_area) / 10000, 3)
-  )
   
   ## -----------------------------
   ## 7) assemble output object
@@ -266,9 +197,7 @@ buildLandbaseRaster <- function(sim) {
   sim$EasternCanadaLandbase <- list(
     PlanningRaster     = planning,
     FMU_raster         = fmu_r,
-    HarvestableMask    = harvestable_mask,
-    RiparianFraction   = rip_r,
-    LandbaseTable      = df
+    HarvestableMask    = harvestable_mask
   )
   
   ## -----------------------------
@@ -290,16 +219,48 @@ buildLandbaseRaster <- function(sim) {
     datatype = "INT1U"
   )
   
-  terra::writeRaster(
-    rip_r,
-    file.path(out_dir, "RiparianFraction_250m.tif"),
-    overwrite = TRUE,
-    datatype = "FLT4S"
-  )
-  
   message("💾 Output rasters written to: ", out_dir)
   
   return(invisible(sim))
+}
+buildProvinces <- function(sim) {
+  
+  message("🔵 Building Provinces layer...")
+  
+  # 1) دانلود مرز استان‌ها
+  prov <- rnaturalearth::ne_states(
+    country = "Canada",
+    returnclass = "sf"
+  )
+  
+  # 2) فقط استان‌های شرقی
+  prov <- prov[prov$name_en %in% c(
+    "Ontario",
+    "Quebec",
+    "New Brunswick",
+    "Nova Scotia",
+    "Prince Edward Island",
+    "Newfoundland and Labrador"
+  ), ]
+  
+  # 3) کد استان (خیلی مهم برای ادامه‌ی کارت)
+  prov$province_code <- c("ON", "QC", "NB", "NS", "PE", "NL")
+  
+  # 4) هم‌سیستم کردن با studyArea
+  prov <- sf::st_transform(prov, sf::st_crs(sim$studyArea))
+  
+  # 5) برش به محدوده مطالعه
+  prov <- sf::st_intersection(prov, sim$studyArea)
+  
+  # 6) تبدیل به SpatVector (استاندارد SpaDES)
+  sim$Provinces <- terra::vect(prov)
+  
+  message(
+    "✔ Provinces ready: ",
+    paste(unique(sim$Provinces$province_code), collapse = ", ")
+  )
+  
+  return(sim)
 }
 
 ###########################
@@ -340,6 +301,7 @@ buildLandbaseRaster <- function(sim) {
   
   studyArea_sf <- sim$studyArea
   studyArea_v  <- terra::vect(studyArea_sf)
+  ## ---------------------------------------------------------
   
   ## ---------------------------------------------------------
   ## 2) CPCAD – Protected & conserved areas
@@ -431,35 +393,13 @@ buildLandbaseRaster <- function(sim) {
       projectTo = studyArea_sf
     )
     
-    buf_m <- P(sim)$riparianBuffer_m
-    streams_buf <- terra::buffer(streams, width = buf_m)
-    
-    template <- terra::rast(
-      studyArea_v,
-      resolution = P(sim)$hydroRaster_m,
-      crs = terra::crs(sim$FMU)
-    )
-    values(template) <- 0
-    
-    riparian_area <- terra::rasterize(
-      streams_buf,
-      template,
-      fun = "sum",
-      background = 0
-    )
-    
-    cell_area <- prod(res(template))
-    riparian_frac <- riparian_area / cell_area
-    riparian_frac[riparian_frac > 1] <- 1
-    
     sim$Hydrology <- list(
-      source = "HydroRIVERS_v10_na",
-      buffer_m = buf_m,
-      raster_m = P(sim)$hydroRaster_m,
-      riparianFraction = riparian_frac
+      source  = "HydroRIVERS_v10_na",
+      streams = streams
     )
     
-    message("✔ Hydrology riparian fraction created.")
+    
+    message("✔ Hydrology streams loaded and cropped.")
   }
   
   return(invisible(sim))
