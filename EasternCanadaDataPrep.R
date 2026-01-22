@@ -85,15 +85,31 @@ doEvent.EasternCanadaDataPrep <- function(sim, eventTime, eventType) {
     eventType,
     
     init = {
+      
       message("🔵 init: building planning grid")
+      ## Build core spatial products required by downstream modules:
+      ## - Planning raster (analysis grid)
+      ## - FMU and protected area masks
       sim <- buildPlanningGrid(sim)
-      sim <- buildProvinces(sim)   # 👈 این خط
+      ## Build provincial boundaries as a separate spatial layer.
+      ## This enables policy-aware processing in downstream modules
+      ## without embedding jurisdictional logic here.
+      sim <- buildProvinces(sim)   # 👈  
     },
     
     warning(noEventWarning(sim))
   )
   return(invisible(sim))
 }
+## Build the planning raster and core landbase components.
+##
+## This function establishes the spatial analysis grid and
+## derives legal/managerial constraints (FMUs, protected areas).
+##
+## Importantly:
+## - No ecological interpretation is performed here
+## - No harvest or policy decisions are applied
+## - Outputs are intended for reuse by multiple downstream modules
 
 buildPlanningGrid <- function(sim) {
   
@@ -175,6 +191,11 @@ buildPlanningGrid <- function(sim) {
   ## -----------------------------
   ## 4) harvestable mask (LEGAL / MANAGERIAL)
   ## -----------------------------
+  ## This mask reflects only legal and administrative constraints
+  ## (FMU presence and protected areas).
+  ##
+  ## It does NOT represent ecological suitability, operability,
+  ## or harvest decisions. Those are deferred to downstream modules.
   harvestable_mask <- terra::ifel(
     !is.na(fmu_r) & prot_r == 0,
     1,
@@ -223,17 +244,26 @@ buildPlanningGrid <- function(sim) {
   
   return(invisible(sim))
 }
+## Build provincial boundaries for the study area.
+##
+## This function exists to provide a clean, explicit
+## jurisdictional layer for downstream modules.
+##
+## Provincial boundaries are NOT used here for decisions,
+## but allow other modules (e.g., hydrology, landbase policy)
+## to apply province-specific rules in a transparent way.
+
 buildProvinces <- function(sim) {
   
   message("🔵 Building Provinces layer...")
   
-  # 1) دانلود مرز استان‌ها
+  # 1) دProvinces boundaries
   prov <- rnaturalearth::ne_states(
     country = "Canada",
     returnclass = "sf"
   )
   
-  # 2) فقط استان‌های شرقی
+  # 2) only eastern provinces
   prov <- prov[prov$name_en %in% c(
     "Ontario",
     "Quebec",
@@ -243,17 +273,23 @@ buildProvinces <- function(sim) {
     "Newfoundland and Labrador"
   ), ]
   
-  # 3) کد استان (خیلی مهم برای ادامه‌ی کارت)
+  
+  # 3) Provinces Codes  
+  ## Short province codes are added explicitly to support
+  ## lightweight joins with policy tables in downstream modules.
   prov$province_code <- c("ON", "QC", "NB", "NS", "PE", "NL")
   
-  # 4) هم‌سیستم کردن با studyArea
+  prov$province_code <- c("ON", "QC", "NB", "NS", "PE", "NL")
+  
+  # 4) Reproject provincial boundaries to match the study area CRS
   prov <- sf::st_transform(prov, sf::st_crs(sim$studyArea))
   
-  # 5) برش به محدوده مطالعه
+  # 5) Clip provincial boundaries to the study area extent
   prov <- sf::st_intersection(prov, sim$studyArea)
   
-  # 6) تبدیل به SpatVector (استاندارد SpaDES)
+  # 6) Convert to SpatVector (SpaDES standard spatial format)
   sim$Provinces <- terra::vect(prov)
+  
   
   message(
     "✔ Provinces ready: ",
@@ -264,6 +300,14 @@ buildProvinces <- function(sim) {
 }
 
 ###########################
+## NOTE:
+## This module is responsible for preparing spatial inputs only.
+## No policy interpretation or landbase decisions are made here.
+##
+## The Provinces object is produced solely to enable
+## jurisdiction-aware processing in downstream modules
+## (e.g., province-based riparian policies in EasternCanadaHydrology).
+## This module does not apply or interpret those policies.
 
 .inputObjects <- function(sim) {
   
@@ -374,8 +418,12 @@ buildProvinces <- function(sim) {
   
   ## ---------------------------------------------------------
   ## 4) Hydrology – HydroRIVERS → riparianFraction
-  ## ---------------------------------------------------------
-  if (is.null(sim$Hydrology)) {
+  ## Hydrology inputs are prepared here but NOT interpreted.
+  ## Stream geometry is passed downstream as-is.
+  ## Buffering, influence calculation, and policy interpretation
+  ## are handled in EasternCanadaHydrology.
+  
+   if (is.null(sim$Hydrology)) {
     
     message("▶ Preparing Hydrology from HydroRIVERS...")
     
@@ -397,6 +445,10 @@ buildProvinces <- function(sim) {
       source  = "HydroRIVERS_v10_na",
       streams = streams
     )
+    ## Hydrology is stored as a structured list to allow
+    ## future expansion (e.g., multiple stream sources,
+    ## ranked streams, or flow attributes) without changing
+    ## downstream module interfaces.
     
     
     message("✔ Hydrology streams loaded and cropped.")
@@ -404,6 +456,12 @@ buildProvinces <- function(sim) {
   
   return(invisible(sim))
 }
+## Summary:
+## EasternCanadaDataPrep standardizes spatial inputs and
+## exposes clean, reusable objects for downstream analysis.
+##
+## Policy interpretation, ecological modeling, and harvest
+## decisions are intentionally excluded from this module.
 
 ggplotFn <- function(data, ...) {
   ggplot2::ggplot(data, ggplot2::aes(TheSample)) +

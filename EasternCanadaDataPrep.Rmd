@@ -9,19 +9,21 @@ output:
     theme: sandstone
     number_sections: false
 ---
-EasternCanadaDataPrep Module
 Executive summary
-EasternCanadaDataPrep is a SpaDES module that constructs a raster-based landbase accounting framework
-for forest modelling applications in Eastern Canada.
+EasternCanadaDataPrep is a SpaDES module that constructs a raster-based
+landbase accounting framework for forest modelling applications in Eastern Canada.
 
-The module defines where harvesting is spatially permissible by applying legal and physical constraints
-to a wall-to-wall planning raster.
+The module defines where harvesting is spatially permissible by applying
+legal and physical constraints to a wall-to-wall planning raster.
 It does not perform forest classification, yield modelling, or harvest allocation.
 
-This module is intentionally limited to spatial accounting only and produces inputs required by
-downstream modules such as LandR, AAC calculation, and harvest scheduling.
+This module is intentionally limited to spatial accounting only and produces
+inputs required by downstream modules such as LandR, AAC calculation,
+and harvest scheduling.
 
 What this module does
+This module:
+
 Defines a consistent Eastern Canada study area
 
 Loads and harmonizes Forest Management Units (FMUs)
@@ -49,11 +51,10 @@ Apply silvicultural or management rules
 
 Allocate or schedule harvest
 
-All ecological interpretation and management decisions are deferred to downstream modules.
+All ecological interpretation and management decisions are deferred to
+downstream modules.
 
 Module workflow
-java
-Copy code
 Study Area
    ↓
 Forest Management Units (FMU)
@@ -68,7 +69,7 @@ Landbase Accounting Table
    ↓
 Downstream modules (LandR, AAC, Harvest)
 Design principles
-This module follows four core design principles:
+This module follows four core design principles.
 
 1. Raster-first
 All landbase accounting is performed on a wall-to-wall raster grid to ensure
@@ -79,7 +80,8 @@ This module handles spatial constraints only.
 Ecological meaning and management decisions are handled downstream.
 
 3. Legal, not ecological, harvestability
-“Harvestable” means not legally excluded, not “forested”, “merchantable”, or “operable”.
+“Harvestable” means not legally excluded, not “forested”, “merchantable”,
+or “operable”.
 
 4. Transparency and reproducibility
 All area calculations are explicit, auditable, and reproducible.
@@ -88,8 +90,8 @@ External dependencies
 Land cover (upstream dependency)
 Land cover is treated as a strict upstream dependency.
 
-This module does not download, preprocess, reclassify, or interpret land-cover data.
-If required, land cover must be supplied by an upstream module.
+This module does not download, preprocess, reclassify, or interpret
+land-cover data. If required, land cover must be supplied by an upstream module.
 
 Expected characteristics (if provided):
 
@@ -101,7 +103,8 @@ Projection: ESRI:102001
 
 Resolution: finer than the planning resolution
 
-Land cover is not required for constructing the legal harvestable mask in this module.
+Land cover is not required for constructing the legal harvestable mask
+in this module.
 
 Study area definition
 If no study area is supplied by the user, the module constructs a default
@@ -128,11 +131,12 @@ Forest Management Units are loaded as vector polygons and harmonized to the
 study area extent and projection.
 
 FMUs define the administrative units for landbase accounting.
-They are rasterized to the planning grid using a center-of-pixel rule to ensure
-consistent assignment of cells to management units.
+They are rasterized to the planning grid using a center-of-pixel rule to
+ensure consistent assignment of cells to management units.
 
 Protected and conserved areas (CPCAD)
-Protected and conserved areas are derived from the Canadian Protected and Conserved Areas Database (CPCAD).
+Protected and conserved areas are derived from the
+Canadian Protected and Conserved Areas Database (CPCAD).
 
 Processing includes:
 
@@ -146,8 +150,8 @@ These areas represent legal exclusions from harvesting and are applied
 as a binary mask.
 
 Hydrology — riparian influence
-Hydrology is represented as a fractional raster of riparian influence, not as
-explicit vector hydrological features.
+Hydrology is represented as a fractional raster of riparian influence,
+not as explicit vector hydrological features.
 
 Rationale
 National-scale hydrology vector datasets are too large and complex for repeated
@@ -168,8 +172,6 @@ Rasterize buffered features to a coarse grid (hydroRaster_m)
 Compute fractional overlap per cell
 
 Output structure
-r
-Copy code
 sim$Hydrology <- list(
   source = "HydroRIVERS_v10_na",
   buffer_m = <buffer distance>,
@@ -205,8 +207,8 @@ Riparian fraction (0–1)
 
 Effective harvestable area after constraints
 
-This table enables transparent and reproducible area calculations
-without repeated raster processing.
+This table enables transparent and reproducible area calculations without
+repeated raster processing.
 
 Harvestable Land Base (HLB) — legacy / optional
 Vector-based Harvestable Land Base (HLB) construction is retained for
@@ -236,8 +238,8 @@ AAC calculation modules
 
 Harvest scheduling and allocation modules
 
-It provides spatial constraints only and makes no assumptions about
-forest condition or management objectives.
+It provides spatial constraints only and makes no assumptions about forest
+condition or management objectives.
 
 Summary
 EasternCanadaDataPrep defines where harvest could legally occur,
