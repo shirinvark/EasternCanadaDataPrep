@@ -3,12 +3,15 @@
 ## =========================================================
 rm(list = ls())
 gc()
+.rs.restartR()
 
 ## =========================================================
 ## 1) LOAD REQUIRED PACKAGES
 ## =========================================================
 library(SpaDES.core)
 library(SpaDES.project)
+library(terra)
+library(sf)
 
 ## =========================================================
 ## 2) SET PATHS (AUTO-CREATED IF NOT EXIST)
@@ -21,54 +24,27 @@ setPaths(
   scratchPath = "E:/EasternCanadaDataPrep/scratch"
 )
 
-## sanity check
 print(getPaths())
 
 ## =========================================================
 ## 3) DOWNLOAD MODULE FROM GITHUB
 ## =========================================================
 SpaDES.project::getModule(
-  modules = "shirinvark/EasternCanadaDataPrep",
+  modules    = "shirinvark/EasternCanadaDataPrep",
   modulePath = getPaths()$modulePath,
-  overwrite = TRUE
+  overwrite  = TRUE
 )
 
-
 ## =========================================================
-## 4) CHECK MODULE VISIBILITY
-## =========================================================
-stopifnot("EasternCanadaDataPrep" %in% modules())
-
-## =========================================================
-## 5) INITIALIZE SIMULATION
+## 4) INITIALIZE & RUN SIMULATION
 ## =========================================================
 sim <- simInit(
   times   = list(start = 0, end = 1),
   modules = "EasternCanadaDataPrep"
 )
 
-## =========================================================
-## 6) RUN MODULE
-## =========================================================
 sim <- spades(sim)
+names(sim)
+sim$Provinces
+unique(sim$Provinces$province_code)
 
-## =========================================================
-## 7) POST-RUN CHECKS
-## =========================================================
-# objects created
-ls(sim)
-
-# planning raster
-sim$PlanningRaster
-terra::ncell(sim$PlanningRaster)
-terra::res(sim$PlanningRaster)
-
-# landbase table summary
-summary(sim$LandbaseTable$effective_area / 10000)
-
-# harvestable mask diagnostics
-table(
-  terra::values(
-    sim$EasternCanadaLandbase$HarvestableMask
-  )
-)
