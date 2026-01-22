@@ -10,3 +10,19 @@ data/**
 *.dbf
 *.prj
 *.shx
+# ---- R / SpaDES build artifacts ----
+*.html
+*.knit.md
+
+# ---- SpaDES runtime ----
+cache/
+modules/
+scratch/
+inputs/
+outputs/
+
+# ---- Local development ----
+testboth.R
+EasternCanadaDataPrep/
+.Rhistory
+.RData
