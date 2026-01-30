@@ -3,13 +3,13 @@
 ## =========================================================
 rm(list = ls())
 gc()
-.rs.restartR()
 
 ## =========================================================
 ## 1) LOAD REQUIRED PACKAGES
 ## =========================================================
 library(SpaDES.core)
 library(SpaDES.project)
+library(reproducible)
 library(terra)
 library(sf)
 
@@ -36,15 +36,37 @@ SpaDES.project::getModule(
 )
 
 ## =========================================================
-## 4) INITIALIZE & RUN SIMULATION
+## 4) INITIALIZE SIMULATION
 ## =========================================================
 sim <- simInit(
   times   = list(start = 0, end = 1),
-  modules = "EasternCanadaDataPrep"
+  modules = "EasternCanadaDataPrep",
+  params  = list(
+    EasternCanadaDataPrep = list(
+      .useCache = TRUE
+    )
+  )
 )
 
+## =========================================================
+## 5) RUN SIMULATION
+## =========================================================
 sim <- spades(sim)
+
+## =========================================================
+## 6) QUICK CHECKS
+## =========================================================
 names(sim)
+
+# Provinces
 sim$Provinces
 unique(sim$Provinces$province_code)
 
+# Planning raster
+sim$PlanningRaster
+terra::res(sim$PlanningRaster)
+
+# Hydrology sanity
+names(sim$Hydrology)
+nrow(sim$Hydrology$streams)
+nrow(sim$Hydrology$lakes)

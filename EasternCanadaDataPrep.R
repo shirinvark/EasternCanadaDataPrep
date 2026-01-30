@@ -219,6 +219,7 @@ buildPlanningGrid <- function(sim) {
     PlanningRaster     = planning,
     FMU_raster         = fmu_r,
     HarvestableMask    = harvestable_mask
+    # LandCover and forest masks are provided by downstream DataPrep modules
   )
   
   ## -----------------------------
@@ -277,8 +278,6 @@ buildProvinces <- function(sim) {
   # 3) Provinces Codes  
   ## Short province codes are added explicitly to support
   ## lightweight joins with policy tables in downstream modules.
-  prov$province_code <- c("ON", "QC", "NB", "NS", "PE", "NL")
-  
   prov$province_code <- c("ON", "QC", "NB", "NS", "PE", "NL")
   
   # 4) Reproject provincial boundaries to match the study area CRS
@@ -417,19 +416,18 @@ buildProvinces <- function(sim) {
   }
   
   ## ---------------------------------------------------------
-  ## 4) Hydrology – HydroRIVERS → riparianFraction
-  ## Hydrology inputs are prepared here but NOT interpreted.
-  ## Stream geometry is passed downstream as-is.
-  ## Buffering, influence calculation, and policy interpretation
-  ## are handled in EasternCanadaHydrology.
+  ## 4) Hydrology – HydroRIVERS + HydroLAKES
+  ## Raw hydrology inputs only (no buffering, no policy)
+  ## ---------------------------------------------------------
   
-   if (is.null(sim$Hydrology)) {
+  if (is.null(sim$Hydrology)) {
     
-    message("▶ Preparing Hydrology from HydroRIVERS...")
+    message("▶ Preparing Hydrology from HydroRIVERS and HydroLAKES...")
     
     hydro_dir <- file.path(dPath, "Hydrology")
     dir.create(hydro_dir, recursive = TRUE, showWarnings = FALSE)
     
+    ## ---- Streams (HydroRIVERS) ----
     streams <- Cache(
       prepInputs,
       url = "https://data.hydrosheds.org/file/HydroRIVERS/HydroRIVERS_v10_na_shp.zip",
@@ -441,17 +439,30 @@ buildProvinces <- function(sim) {
       projectTo = studyArea_sf
     )
     
-    sim$Hydrology <- list(
-      source  = "HydroRIVERS_v10_na",
-      streams = streams
+    ## ---- Lakes (HydroLAKES) ----
+    lakes <- Cache(
+      prepInputs,
+      url = "https://data.hydrosheds.org/file/hydrolakes/HydroLAKES_polys_v10_shp.zip",
+      destinationPath = hydro_dir,
+      archive = "HydroLAKES_polys_v10_shp.zip",
+      targetFile = "HydroLAKES_polys_v10_shp/HydroLAKES_polys_v10.shp",
+      fun = terra::vect,
+      cropTo = studyArea_sf,
+      projectTo = studyArea_sf
     )
-    ## Hydrology is stored as a structured list to allow
-    ## future expansion (e.g., multiple stream sources,
-    ## ranked streams, or flow attributes) without changing
-    ## downstream module interfaces.
     
+    ## ---- Assemble hydrology object ----
+    sim$Hydrology <- list(
+      source  = c("HydroRIVERS_v10_na", "HydroLAKES_v10"),
+      streams = streams,
+      lakes   = lakes
+    )
     
-    message("✔ Hydrology streams loaded and cropped.")
+    message(
+      "✔ Hydrology ready (raw geometry): ",
+      nrow(streams), " stream features and ",
+      nrow(lakes), " lake features."
+    )
   }
   
   return(invisible(sim))
