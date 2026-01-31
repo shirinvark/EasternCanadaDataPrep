@@ -419,10 +419,14 @@ buildProvinces <- function(sim) {
   ## 4) Hydrology – HydroRIVERS + HydroLAKES
   ## Raw hydrology inputs only (no buffering, no policy)
   ## ---------------------------------------------------------
+  ## ---------------------------------------------------------
+  ## 4) Hydrology – HydroRIVERS + HydroLAKES + HydroBASINS
+  ## Raw hydrology inputs only (no buffering, no policy)
+  ## ---------------------------------------------------------
   
   if (is.null(sim$Hydrology)) {
     
-    message("▶ Preparing Hydrology from HydroRIVERS and HydroLAKES...")
+    message("▶ Preparing Hydrology from HydroRIVERS, HydroLAKES, and HydroBASINS...")
     
     hydro_dir <- file.path(dPath, "Hydrology")
     dir.create(hydro_dir, recursive = TRUE, showWarnings = FALSE)
@@ -451,21 +455,46 @@ buildProvinces <- function(sim) {
       projectTo = studyArea_sf
     )
     
-    ## ---- Assemble hydrology object ----
-    sim$Hydrology <- list(
-      source  = c("HydroRIVERS_v10_na", "HydroLAKES_v10"),
-      streams = streams,
-      lakes   = lakes
+    ## ---- Basins (HydroBASINS – Level 8, North America) ----
+    basins <- Cache(
+      prepInputs,
+      url = "https://data.hydrosheds.org/file/HydroBASINS/standard/hybas_na_lev08_v1c.zip",
+      destinationPath = hydro_dir,
+      archive = "hybas_na_lev08_v1c.zip",
+      targetFile = "hybas_na_lev08_v1c/hybas_na_lev08_v1c.shp",
+      fun = terra::vect,
+      cropTo = studyArea_sf,
+      projectTo = studyArea_sf
     )
+    
+    ## ---- Assemble hydrology object (internal structure) ----
+    sim$Hydrology <- list(
+      source  = c(
+        "HydroRIVERS_v10_na",
+        "HydroLAKES_v10",
+        "HydroBASINS_v1c_lev08"
+      ),
+      streams = streams,
+      lakes   = lakes,
+      basins  = basins
+    )
+    
+    ## ---- Expose components for downstream modules (interface) ----
+    ## Required by RiparianBuffers
+    sim$Hydrology_streams <- streams
+    sim$Hydrology_lakes   <- lakes
+    sim$Hydrology_basins  <- basins
     
     message(
       "✔ Hydrology ready (raw geometry): ",
-      nrow(streams), " stream features and ",
-      nrow(lakes), " lake features."
+      nrow(streams), " stream features, ",
+      nrow(lakes), " lake features, ",
+      nrow(basins), " basin polygons."
     )
   }
   
   return(invisible(sim))
+  
 }
 ## Summary:
 ## EasternCanadaDataPrep standardizes spatial inputs and
