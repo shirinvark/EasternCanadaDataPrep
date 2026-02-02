@@ -83,24 +83,14 @@ defineModule(sim, list(
 doEvent.EasternCanadaDataPrep <- function(sim, eventTime, eventType) {
   switch(
     eventType,
-    
     init = {
-      
-      message("🔵 init: building planning grid")
-      ## Build core spatial products required by downstream modules:
-      ## - Planning raster (analysis grid)
-      ## - FMU and protected area masks
-      sim <- buildPlanningGrid(sim)
-      ## Build provincial boundaries as a separate spatial layer.
-      ## This enables policy-aware processing in downstream modules
-      ## without embedding jurisdictional logic here.
-      sim <- buildProvinces(sim)   # 👈  
+      sim <- EasternCanadaInit(sim)
     },
-    
     warning(noEventWarning(sim))
   )
-  return(invisible(sim))
+  invisible(sim)
 }
+
 ## Build the planning raster and core landbase components.
 ##
 ## This function establishes the spatial analysis grid and
