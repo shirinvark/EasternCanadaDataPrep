@@ -492,18 +492,7 @@ buildProvinces <- function(sim) {
       nrow(basins), " basin polygons."
     )
   }
-  ## ---------------------------------------------------------
-  ## Land cover harmonization (spatial only)
-  ##
-  ## Land cover is produced by upstream modules (e.g. Biomass_borealDataPrep).
-  ## This module does NOT interpret land cover classes.
-  ## Here we only harmonize spatial properties:
-  ## - CRS
-  ## - extent (crop)
-  ## - mask to study area
-  ## ---------------------------------------------------------
   
-
   
   return(invisible(sim))
   
