@@ -12,6 +12,13 @@ EasternCanadaInit <- function(sim) {
   }
   
   sim <- buildPlanningGrid(sim)
+  ## LandCover: فقط crop + CRS/grid alignment
+lc <- sim$LandCover
+lc <- terra::crop(lc, sim$studyArea)
+lc <- terra::mask(lc, sim$studyArea)
+lc <- terra::project(lc, sim$PlanningRaster, method = "near")
+lc <- terra::resample(lc, sim$PlanningRaster, method = "near")
+sim$LandCoverAligned <- lc
   sim <- buildProvinces(sim)
   
   invisible(sim)
