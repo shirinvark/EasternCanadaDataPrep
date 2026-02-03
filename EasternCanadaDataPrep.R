@@ -503,29 +503,7 @@ buildProvinces <- function(sim) {
   ## - mask to study area
   ## ---------------------------------------------------------
   
-  ## ---------------------------------------------------------
-  ## Land cover harmonization (spatial only)
-  ## ---------------------------------------------------------
-  
-  if (is.null(sim$rstLCC)) {
-    stop("rstLCC is required but missing. It must be provided by an upstream module.")
-  }
-  
-  rst <- sim$rstLCC
-  
-  # ✅ REPROJECT
-  if (!terra::same.crs(rst, sim$studyArea)) {
-    rst <- terra::project(rst, sim$studyArea, method = "near")
-  }
-  
-  # ✅ CROP
-  rst <- terra::crop(rst, sim$studyArea)
-  
-  # ✅ MASK
-  rst <- terra::mask(rst, sim$studyArea)
-  
-  sim$rstLCC <- rst
-  
+
   
   return(invisible(sim))
   
