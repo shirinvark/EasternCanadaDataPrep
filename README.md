@@ -47,6 +47,31 @@ All spatial outputs are harmonized to:
 **ESRI:102001**
 
 ---
+## 🌲 Land Cover Handling
+
+This module does **not** generate or interpret land cover data.
+
+Land cover is expected to be provided by an upstream module
+(e.g., Biomass_borealDataPrep, SCANFI-based workflows, or other LandR-compatible sources)
+as a raster object named:
+
+`rstLCC`
+
+Within EasternCanadaDataPrep, land cover is handled in a **strictly spatial** manner only:
+
+- Reprojection to the study area CRS  
+- Cropping and masking to the study area extent  
+- Alignment to the PlanningRaster grid  
+
+No reclassification, forest / non-forest interpretation, or policy logic
+is applied at this stage.
+
+The harmonized land cover raster is exposed as:
+
+```r
+sim$LandCoverAligned
+for use by downstream landbase, biomass, or AAC modules.
+
 
 ## 📦 Input Objects
 
