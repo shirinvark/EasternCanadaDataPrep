@@ -81,7 +81,12 @@ defineModule(sim, list(
       objectName = "PlanningRaster",
       objectClass = "SpatRaster",
       desc = "Planning raster used for landbase accounting and downstream AAC calculations."
-    )
+    ),
+    createsOutput(
+    objectName  = "LandCoverAligned",
+    objectClass = "SpatRaster",
+    desc        = "Land cover raster spatially harmonized to PlanningRaster (crop, CRS, grid alignment only)."
+  )
     
   )
   
