@@ -55,7 +55,14 @@ defineModule(sim, list(
       objectClass = "list",
       desc = "hydrology raw (streams)",
       sourceURL = NA
+    ),
+    expectsInput(
+      "rstLCC",
+      objectClass = "SpatRaster",
+      desc = "Land cover raster produced upstream by Biomass_borealDataPrep",
+      sourceURL = NA
     )
+    
   ),
   outputObjects = bindrows(
     
@@ -122,11 +129,14 @@ buildPlanningGrid <- function(sim) {
   ## -----------------------------
   ## 1) planning raster (NO land cover)
   ## -----------------------------
+  study_v <- terra::vect(sim$studyArea)
+  
   planning <- terra::rast(
-    sim$studyArea,
+    study_v,
     resolution = 250,
-    crs = terra::crs(fmu)
+    crs = terra::crs(study_v)
   )
+  
   
   values(planning) <- NA
   
@@ -482,6 +492,40 @@ buildProvinces <- function(sim) {
       nrow(basins), " basin polygons."
     )
   }
+  ## ---------------------------------------------------------
+  ## Land cover harmonization (spatial only)
+  ##
+  ## Land cover is produced by upstream modules (e.g. Biomass_borealDataPrep).
+  ## This module does NOT interpret land cover classes.
+  ## Here we only harmonize spatial properties:
+  ## - CRS
+  ## - extent (crop)
+  ## - mask to study area
+  ## ---------------------------------------------------------
+  
+  ## ---------------------------------------------------------
+  ## Land cover harmonization (spatial only)
+  ## ---------------------------------------------------------
+  
+  if (is.null(sim$rstLCC)) {
+    stop("rstLCC is required but missing. It must be provided by an upstream module.")
+  }
+  
+  rst <- sim$rstLCC
+  
+  # ✅ REPROJECT
+  if (!terra::same.crs(rst, sim$studyArea)) {
+    rst <- terra::project(rst, sim$studyArea, method = "near")
+  }
+  
+  # ✅ CROP
+  rst <- terra::crop(rst, sim$studyArea)
+  
+  # ✅ MASK
+  rst <- terra::mask(rst, sim$studyArea)
+  
+  sim$rstLCC <- rst
+  
   
   return(invisible(sim))
   

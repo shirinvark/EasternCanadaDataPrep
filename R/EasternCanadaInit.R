@@ -2,10 +2,16 @@ EasternCanadaInit <- function(sim) {
   
   message("🔵 init: building Eastern Canada spatial products")
   
-  ## Core spatial products
-  sim <- buildPlanningGrid(sim)
+  ## land cover must come from upstream
+  if (is.null(sim$rstLCC)) {
+    stop(
+      "rstLCC is missing.\n",
+      "EasternCanadaDataPrep expects land cover from an upstream module ",
+      "(e.g., Biomass_borealDataPrep)."
+    )
+  }
   
-  ## Jurisdictional layer for downstream policy modules
+  sim <- buildPlanningGrid(sim)
   sim <- buildProvinces(sim)
   
   invisible(sim)
