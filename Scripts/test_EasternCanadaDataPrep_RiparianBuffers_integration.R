@@ -50,6 +50,18 @@ getModule(
   modulePath = getPaths()$modulePath,
   overwrite  = TRUE
 )
+## =========================================================
+## 3.5) LOAD LANDFCOVER (SCANFI – test only)
+## =========================================================
+
+## =========================================================
+## 3.5) LOAD RAW LANDFCOVER (NO SPATIAL OPS)
+## =========================================================
+
+rstLCC <- terra::rast(
+  "E:/MODULES_TESTS/SCANFI_att_nfiLandCover_CanadaLCCclassCodes_S_2010_v1_1.tif"
+)
+
 
 ## =========================================================
 ## 5) INITIALIZE SIMULATION
@@ -61,12 +73,12 @@ sim <- simInit(
     "RiparianBuffers"
   ),
   objects = list(
-    studyArea = studyArea
+    studyArea = studyArea,
+    rstLCC  = rstLCC    # 👈👈 این خط مهمه
   ),
   params = list(
     RiparianBuffers = list(
       hydroRaster_m = 30
-      # riparian policy از خود ماژول میاد
     )
   )
 )
