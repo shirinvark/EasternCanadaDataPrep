@@ -269,9 +269,9 @@ buildProvinces <- function(sim) {
   
   
   # 3) Provinces Codes  
-  ## Short province codes are added explicitly to support
+  ## Short jurisdiction are added explicitly to support
   ## lightweight joins with policy tables in downstream modules.
-  prov$province_code <- c("ON", "QC", "NB", "NS", "PE", "NL")
+  prov$jurisdiction <- c("ON", "QC", "NB", "NS", "PE", "NL")
   
   # 4) Reproject provincial boundaries to match the study area CRS
   prov <- sf::st_transform(prov, sf::st_crs(sim$studyArea))
