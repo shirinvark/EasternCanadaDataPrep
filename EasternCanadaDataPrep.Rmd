@@ -1,7 +1,7 @@
 ---
 title: "EasternCanadaDataPrep Manual"
-subtitle: "Eastern Canada spatial data preparation"
-date: "Last updated: 2025-12-15"
+subtitle: "Spatial data preparation for Eastern Canada"
+date: "Last updated: 2026-02-03"
 output:
   bookdown::html_document2:
     toc: true
@@ -9,228 +9,302 @@ output:
     theme: sandstone
     number_sections: false
 ---
-Executive summary
-EasternCanadaDataPrep is a SpaDES module that constructs a raster-based
-landbase accounting framework for forest modelling applications in Eastern Canada.
 
-The module defines where harvesting is spatially permissible by applying
-legal and physical constraints to a wall-to-wall planning raster.
-It does not perform forest classification, yield modelling, or harvest allocation.
+```{r setup, include=FALSE}
+library(SpaDES.core)
+library(SpaDES.project)
+library(terra)
+library(sf)
 
-This module is intentionally limited to spatial accounting only and produces
-inputs required by downstream modules such as LandR, AAC calculation,
-and harvest scheduling.
+knitr::opts_chunk$set(
+  echo    = TRUE,
+  eval    = TRUE,
+  message = FALSE,
+  warning = FALSE
+)
 
-What this module does
-This module:
+```
 
-Defines a consistent Eastern Canada study area
+## Executive summary
 
-Loads and harmonizes Forest Management Units (FMUs)
+**EasternCanadaDataPrep** is a SpaDES module that prepares and harmonizes
+core spatial inputs for forest modelling applications in Eastern Canada.
 
-Loads and filters protected and conserved areas (CPCAD)
+The module defines a **spatial planning framework** and identifies areas
+that are **legally available for harvesting**, prior to applying any
+ecological, hydrological, or management-specific rules.
 
-Prepares hydrology inputs for riparian influence analysis
+This module is intentionally limited to **spatial accounting and legal
+constraints only**. It does not interpret land cover, forest condition,
+or policy decisions, all of which are handled by downstream modules.
 
-Constructs a coarse-resolution planning raster (default: 250 m)
+---
 
-Produces a cell-based landbase accounting table with effective harvestable area
+## Purpose
 
-What this module does not do
+This module answers a single, well-defined question:
+
+> **Where are spatial planning units defined, and which areas are legally
+> available for harvesting, before ecological or policy-based rules are applied?**
+
+To answer this question, the module:
+
+- Defines a consistent Eastern Canada study area  
+- Harmonizes all spatial inputs to a common projection  
+- Prepares administrative boundaries (FMUs)  
+- Applies legal exclusions (protected and conserved areas)  
+- Constructs a coarse-resolution planning raster  
+- Prepares raw hydrology inputs for downstream processing  
+
+---
+
+## What this module does
+
+✔ Defines a study area for Eastern Canada  
+✔ Loads and harmonizes Forest Management Units (FMUs)  
+✔ Loads and filters protected and conserved areas (CPCAD)  
+✔ Prepares raw hydrology vector inputs  
+✔ Constructs a planning raster (default: 250 m)  
+✔ Creates a legal harvestable mask  
+
+---
+
+## What this module does **not** do
+
 This module intentionally avoids ecological or management interpretation.
 
-It does not:
+It does **not**:
 
-Download or process land-cover data
+- Download or process land-cover data  
+- Classify forest vs. non-forest  
+- Estimate biomass, age, or productivity  
+- Apply riparian buffering or hydrological influence  
+- Apply silvicultural or management rules  
+- Allocate or schedule harvest  
 
-Classify forest vs. non-forest
+All such decisions are deferred to downstream modules.
 
-Estimate biomass, age, or productivity
+---
 
-Apply silvicultural or management rules
+## Spatial reference system
 
-Allocate or schedule harvest
+All spatial inputs and outputs are harmonized to:
 
-All ecological interpretation and management decisions are deferred to
-downstream modules.
+**Canada Albers Equal Area Conic**  
+**ESRI:102001**
 
-Module workflow
-Study Area
-   ↓
-Forest Management Units (FMU)
-   ↓
-Protected Areas (CPCAD)
-   ↓
-Hydrology inputs (HydroRIVERS)
-   ↓
-Planning Raster (250 m)
-   ↓
-Landbase Accounting Table
-   ↓
-Downstream modules (LandR, AAC, Harvest)
-Design principles
-This module follows four core design principles.
+---
 
-1. Raster-first
-All landbase accounting is performed on a wall-to-wall raster grid to ensure
-scalability and computational efficiency.
+## Input objects
 
-2. Separation of concerns
-This module handles spatial constraints only.
-Ecological meaning and management decisions are handled downstream.
+The module expects or generates the following inputs:
 
-3. Legal, not ecological, harvestability
-“Harvestable” means not legally excluded, not “forested”, “merchantable”,
-or “operable”.
+| Object | Class | Description |
+|------|------|-------------|
+| `studyArea` | `sf` / `SpatVector` | Polygon defining the modelling extent |
+| `FMU` | `sf` / `SpatVector` | Forest Management Unit boundaries |
+| `CPCAD` | `sf` / `SpatVector` | Protected and conserved areas |
+| `Hydrology` | `list` | Raw hydrology inputs (streams, lakes, basins) |
+| `rstLCC` | `SpatRaster` | Land-cover raster supplied by an upstream module |
 
-4. Transparency and reproducibility
-All area calculations are explicit, auditable, and reproducible.
+If not provided by the user, all vector inputs are automatically created
+or downloaded inside `.inputObjects()`.
 
-External dependencies
-Land cover (upstream dependency)
-Land cover is treated as a strict upstream dependency.
+---
 
-This module does not download, preprocess, reclassify, or interpret
-land-cover data. If required, land cover must be supplied by an upstream module.
+## Study area definition
 
-Expected characteristics (if provided):
-
-Object name: sim$LandCover
-
-Type: terra::SpatRaster
-
-Projection: ESRI:102001
-
-Resolution: finer than the planning resolution
-
-Land cover is not required for constructing the legal harvestable mask
-in this module.
-
-Study area definition
-If no study area is supplied by the user, the module constructs a default
+If no study area is supplied, the module constructs a default
 Eastern Canada study area including:
 
-Ontario
+- Ontario  
+- Québec  
+- New Brunswick  
+- Nova Scotia  
+- Prince Edward Island  
+- Newfoundland and Labrador  
 
-Québec
+All layers are cropped, masked, and reprojected to the project CRS.
 
-New Brunswick
+---
 
-Nova Scotia
+## Forest Management Units (FMUs)
 
-Prince Edward Island
+Forest Management Units are:
 
-Newfoundland and Labrador
+- Loaded as vector polygons  
+- Cropped and masked to the study area  
+- Reprojected to ESRI:102001  
+- Rasterized to the planning grid  
 
-All spatial layers are harmonized to:
+Rasterization uses a **center-of-pixel rule** to ensure consistent
+assignment of planning cells to management units.
 
-Canada Albers Equal Area Conic (ESRI:102001)
+FMUs define the **administrative units** used by downstream accounting
+and harvest-related modules.
 
-Forest Management Units (FMUs)
-Forest Management Units are loaded as vector polygons and harmonized to the
-study area extent and projection.
+---
 
-FMUs define the administrative units for landbase accounting.
-They are rasterized to the planning grid using a center-of-pixel rule to
-ensure consistent assignment of cells to management units.
+## Protected and conserved areas (CPCAD)
 
-Protected and conserved areas (CPCAD)
-Protected and conserved areas are derived from the
-Canadian Protected and Conserved Areas Database (CPCAD).
+Protected areas are derived from the
+**Canadian Protected and Conserved Areas Database (CPCAD)**.
 
 Processing includes:
 
-Cropping and masking to the study area
+- Cropping and masking to the study area  
+- Reprojection to ESRI:102001  
+- Policy-level filtering only  
 
-Reprojection to ESRI:102001
+Filtered CPCAD areas represent **legal exclusions** from harvesting.
+No ecological interpretation is applied.
 
-Policy-level filtering (no ecological interpretation)
+---
 
-These areas represent legal exclusions from harvesting and are applied
-as a binary mask.
+## Hydrology — raw inputs
 
-Hydrology — riparian influence
-Hydrology is represented as a fractional raster of riparian influence,
-not as explicit vector hydrological features.
+Hydrology inputs are prepared as **raw vector geometries** derived from:
 
-Rationale
-National-scale hydrology vector datasets are too large and complex for repeated
-use in raster-based modelling workflows.
+- HydroRIVERS  
+- HydroLAKES  
+- HydroBASINS  
 
-Instead, hydrology is represented by its spatial influence on land area.
+This module performs only:
 
-Data source
-Riparian influence is derived from HydroRIVERS (HydroSHEDS).
+- Downloading and cropping to the study area  
+- Reprojection to the project CRS  
 
-Processing logic
-Load HydroRIVERS flowlines and crop to the study area
+No buffering, rasterization, or riparian influence calculations
+are performed at this stage.
 
-Apply a uniform buffer (riparianBuffer_m)
+Hydrological buffering and riparian influence are handled by
+downstream modules once jurisdiction- and policy-specific rules
+are defined.
 
-Rasterize buffered features to a coarse grid (hydroRaster_m)
+---
 
-Compute fractional overlap per cell
+## Land cover — upstream dependency
 
-Output structure
-sim$Hydrology <- list(
-  source = "HydroRIVERS_v10_na",
-  buffer_m = <buffer distance>,
-  raster_m = <resolution>,
-  riparianFraction = <SpatRaster [0–1]>
-)
-Each cell value represents the fraction of the cell influenced by riparian buffers.
+Land cover is treated as a **strict upstream dependency**.
 
-Planning raster
-The planning raster is a coarse-resolution grid (default: 250 m) that defines
-the spatial units used for landbase accounting.
+This module does not download, preprocess, reclassify, or interpret
+land-cover data.
 
-It is constructed by:
+If provided, land cover must be supplied by an upstream module
+(e.g., Biomass_borealDataPrep or SCANFI-based workflows) as:
 
-Creating a wall-to-wall raster template
+- Object name: `sim$rstLCC`  
+- Type: `terra::SpatRaster`  
 
-Assigning FMU identifiers
+Within EasternCanadaDataPrep, land cover is handled **spatially only**:
 
-Applying protected-area exclusions
+- Reprojection to the study area CRS  
+- Cropping and masking to the study area extent  
+- Alignment to the PlanningRaster grid  
 
-No land-cover or ecological classification is applied at this stage.
+The harmonized raster is exposed as:
 
-Landbase accounting table
-A cell-based accounting table is constructed from the planning raster.
+`sim$LandCoverAligned`
 
-Each row represents one planning cell and records:
+Land cover is not required to construct the legal harvestable mask in this module.
 
-FMU identifier
 
-Cell area (m²)
+## Planning raster
+The planning raster is a coarse-resolution grid (default: 250 m)
+that defines the spatial units used by downstream models.
 
-Riparian fraction (0–1)
+It is constructed from:
 
-Effective harvestable area after constraints
+The study area extent
 
-This table enables transparent and reproducible area calculations without
-repeated raster processing.
+A fixed target resolution
 
-Harvestable Land Base (HLB) — legacy / optional
-Vector-based Harvestable Land Base (HLB) construction is retained for
-development and validation purposes only.
+The project CRS
 
-The primary landbase representation in this module is raster-based.
+No land-cover, forest-type, or ecological information is used
+at this stage.
 
-Module outputs
+## Legal harvestable mask
+A binary harvestable mask is created where:
+
+Cells fall inside an FMU, and
+
+Cells are not inside protected or conserved areas
+
+This mask represents legal availability only and does not
+imply ecological suitability or management intent.
+
+## Output objects
 Primary outputs include:
 
-Planning raster
+| Output | Type | Description |
+|------|------|-------------|
+| PlanningRaster | SpatRaster | Coarse-resolution planning grid |
+| EasternCanadaLandbase | list | Planning grid and legal availability masks |
+| Provinces | SpatVector | Provincial boundaries cropped to the study area |
+| LandCoverAligned | SpatRaster | Spatially harmonized land cover (if provided) |
 
-Harvestable mask raster
+The landbase object has the structure:
+```{r landbase_structure, eval=FALSE}
+sim$EasternCanadaLandbase <- list(
+  PlanningRaster  = "<SpatRaster>",
+  FMU_raster      = "<SpatRaster>",
+  HarvestableMask = "<SpatRaster>"
+)
+```
+## Example usage
 
-Riparian fraction raster
+The following example demonstrates how to run
+EasternCanadaDataPrep as a standalone module.
+```{r module_usage, eval=FALSE}
+## Clean session
+rm(list = ls())
+gc()
 
-Landbase accounting table
+library(SpaDES.core)
+library(SpaDES.project)
+library(terra)
 
-Structured landbase object for downstream use
+setPaths(
+  cachePath   = "E:/EasternCanadaDataPrep/cache",
+  inputPath   = "E:/EasternCanadaDataPrep/inputs",
+  outputPath  = "E:/EasternCanadaDataPrep/outputs",
+  modulePath  = "E:/EasternCanadaDataPrep/modules",
+  scratchPath = "E:/EasternCanadaDataPrep/scratch"
+)
 
-Relationship to other modules
-This module must be run before:
+## Load module
+getModule(
+  modules    = "shirinvark/EasternCanadaDataPrep",
+  modulePath = getPaths()$modulePath,
+  overwrite  = TRUE
+)
+
+## Load upstream land cover (test only)
+rstLCC <- terra::rast(
+  "E:/MODULES_TESTS/SCANFI_att_nfiLandCover_CanadaLCCclassCodes_S_2010_v1_1.tif"
+)
+
+## Initialize simulation
+sim <- simInit(
+  times   = list(start = 1, end = 1),
+  modules = "EasternCanadaDataPrep",
+  objects = list(
+    rstLCC = rstLCC
+  )
+)
+
+## Run
+sim <- spades(sim)
+
+## Inspect outputs
+names(sim)
+names(sim$EasternCanadaLandbase)
+unique(sim$Provinces$jurisdiction)
+```
+## Relationship to downstream modules
+
+RiparianBuffers
 
 LandR forest dynamics modules
 
@@ -238,12 +312,24 @@ AAC calculation modules
 
 Harvest scheduling and allocation modules
 
-It provides spatial constraints only and makes no assumptions about forest
-condition or management objectives.
+It provides spatial and legal constraints only.
+This module must be run before:
 
-Summary
+RiparianBuffers
+
+LandR forest dynamics modules
+
+AAC calculation modules
+
+Harvest scheduling and allocation modules
+
+It provides spatial and legal constraints only and makes
+no assumptions about forest condition or management objectives.
+
+## Summary
 EasternCanadaDataPrep defines where harvest could legally occur,
 not where it should occur.
 
-This distinction ensures a clean, modular, and scalable modelling architecture.
+This separation ensures a clean, modular, and scalable
+forest modelling architecture.
 

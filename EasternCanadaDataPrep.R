@@ -122,11 +122,14 @@ buildPlanningGrid <- function(sim) {
   ## -----------------------------
   ## 1) planning raster (NO land cover)
   ## -----------------------------
+  study_v <- terra::vect(sim$studyArea)
+  
   planning <- terra::rast(
-    sim$studyArea,
+    study_v,
     resolution = 250,
-    crs = terra::crs(fmu)
+    crs = terra::crs(study_v)
   )
+  
   
   values(planning) <- NA
   
@@ -351,12 +354,12 @@ buildProvinces <- function(sim) {
       url = "https://drive.google.com/uc?export=download&id=1ELIaRgO5PNgliGh0Tq2BI6V5654ydxYu",
       destinationPath = cpcad_dir,
       targetFile = "CPCAD_2024.gpkg",
-      fun = "terra::vect",
+      fun = terra::vect,
       layer = "ProtectedConservedArea_2024 ProtectedConservedArea_2024",
       cropTo    = studyArea_sf,
-      maskTo    = studyArea_sf,
       projectTo = studyArea_sf
     )
+    
   }
   
   cpcad <- sim$CPCAD
@@ -394,11 +397,11 @@ buildProvinces <- function(sim) {
       url = "https://drive.google.com/uc?export=download&id=1qp4TRgFArANp1YNEoOpeuwLlM-khf4v1",
       destinationPath = fmu_dir,
       targetFile = "Forest_Management_Units_CA.gpkg",
-      fun = "terra::vect",
+      fun = terra::vect,
       cropTo    = studyArea_sf,
-      maskTo    = studyArea_sf,
       projectTo = studyArea_sf
     )
+    
   }
   
   if (!terra::same.crs(sim$FMU, studyArea_v)) {
