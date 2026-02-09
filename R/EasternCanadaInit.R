@@ -2,11 +2,24 @@ EasternCanadaInit <- function(sim) {
   
   message("🔵 init: building Eastern Canada spatial products")
   
-  ## Core spatial products
-  sim <- buildPlanningGrid(sim)
+  ## ---------------------------------------------------------
+  ## sanity checks (fail early, fail loud)
+  ## ---------------------------------------------------------
+  stopifnot(
+    !is.null(sim$studyArea),
+    !is.null(sim$FMU),
+    !is.null(sim$CPCAD)
+  )
   
-  ## Jurisdictional layer for downstream policy modules
+  ## ---------------------------------------------------------
+  ## 1) Jurisdictional layer (lightweight, vector)
+  ## ---------------------------------------------------------
   sim <- buildProvinces(sim)
+  
+  ## ---------------------------------------------------------
+  ## 2) Planning grid & landbase (heavy raster work)
+  ## ---------------------------------------------------------
+  sim <- buildPlanningGrid(sim)
   
   invisible(sim)
 }

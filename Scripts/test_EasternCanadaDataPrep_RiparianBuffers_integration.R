@@ -82,7 +82,7 @@ sim <- spades(sim)
 ls(sim)
 
 # Provinces (باید فقط ON باشه)
-unique(sim$Provinces$province_code)
+unique(sim$Provinces$jurisdiction)
 
 # Planning raster (extent باید Sudbury FMU باشه)
 sim$PlanningRaster
