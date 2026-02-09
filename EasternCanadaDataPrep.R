@@ -51,6 +51,12 @@ defineModule(sim, list(
     expectsInput("CPCAD",objectClass = c("sf", "SpatVector"), desc = "CPCAD protected areas — generated inside this module", sourceURL = NA),
     expectsInput("FMU",objectClass = c("sf", "SpatVector"), desc = "Forest Management Units — generated inside this module",sourceURL = NA),
     expectsInput(
+      "rstLCC",
+      objectClass = "SpatRaster",
+      desc = "Classified land cover raster (upstream)(forest / non-forest)",
+      sourceURL = NA
+    ),
+    expectsInput(
       "Hydrology",
       objectClass = "list",
       desc = "hydrology raw (streams)",
@@ -411,6 +417,21 @@ buildProvinces <- function(sim) {
   
   if (!terra::same.crs(sim$FMU, studyArea_v)) {
     sim$FMU <- terra::project(sim$FMU, studyArea_v)
+  }
+  
+  ##LCC
+  ## LCC — upstream only
+  if (!is.null(sim$rstLCC)) {
+    
+    lcc <- sim$rstLCC
+    
+    if (!terra::same.crs(lcc, studyArea_v)) {
+      lcc <- terra::project(lcc, studyArea_v)
+    }
+    
+    lcc <- terra::crop(lcc, studyArea_v)
+    
+    sim$rstLCC <- lcc
   }
   
   ## ---------------------------------------------------------
