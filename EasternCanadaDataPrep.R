@@ -251,13 +251,13 @@ buildProvinces <- function(sim) {
   
   message("🔵 Building Provinces layer...")
   
-  # 1) دProvinces boundaries
+  ## 1) Provincial boundaries
   prov <- rnaturalearth::ne_states(
     country = "Canada",
     returnclass = "sf"
   )
   
-  # 2) only eastern provinces
+  ## 2) Only eastern provinces
   prov <- prov[prov$name_en %in% c(
     "Ontario",
     "Quebec",
@@ -267,28 +267,29 @@ buildProvinces <- function(sim) {
     "Newfoundland and Labrador"
   ), ]
   
-  
-  # 3) Provinces Codes  
-  ## Short jurisdiction are added explicitly to support
-  ## lightweight joins with policy tables in downstream modules.
+  ## 3) Province codes (jurisdiction)
+  ## Explicit short codes for downstream policy joins
   prov$jurisdiction <- c("ON", "QC", "NB", "NS", "PE", "NL")
   
-  # 4) Reproject provincial boundaries to match the study area CRS
+  ## 4) Reproject to study area CRS
   prov <- sf::st_transform(prov, sf::st_crs(sim$studyArea))
   
-  # 5) Clip provincial boundaries to the study area extent
+  ## 5) Clip to study area
   prov <- sf::st_intersection(prov, sim$studyArea)
   
-  # 6) Convert to SpatVector (SpaDES standard spatial format)
+  ## 6) Keep only required attribute(s) BEFORE conversion
+  prov <- prov[, "jurisdiction", drop = FALSE]
+  
+  ## 7) Convert to SpatVector (SpaDES standard)
   sim$Provinces <- terra::vect(prov)
   
-  
+  ## 8) Message (FIXED)
   message(
     "✔ Provinces ready: ",
-    paste(unique(sim$Provinces$province_code), collapse = ", ")
+    paste(unique(sim$Provinces$jurisdiction), collapse = ", ")
   )
   
-  return(sim)
+  return(invisible(sim))
 }
 
 ###########################
