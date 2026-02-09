@@ -283,6 +283,10 @@ buildProvinces <- function(sim) {
   ## 7) Convert to SpatVector (SpaDES standard)
   sim$Provinces <- terra::vect(prov)
   
+  # Provinces are a data source;
+  # jurisdiction is the abstract policy interface exposed downstream
+  sim$jurisdiction <- sim$Provinces
+  
   ## 8) Message (FIXED)
   message(
     "✔ Provinces ready: ",
