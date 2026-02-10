@@ -498,7 +498,7 @@ buildProvinces <- function(sim) {
       basins  = basins
     )
     
-    ## ---- Expose components for downstream modules (interface) ----
+    ## ---- Expose components for downstream modules (interface) ---
     ## Required by RiparianBuffers
     sim$Hydrology_streams <- streams
     sim$Hydrology_lakes   <- lakes
