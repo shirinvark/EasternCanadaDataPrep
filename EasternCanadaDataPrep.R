@@ -461,7 +461,7 @@ buildProvinces <- function(sim) {
     hydro_dir <- file.path(dPath, "Hydrology")
     dir.create(hydro_dir, recursive = TRUE, showWarnings = FALSE)
     
-    ## ---- Streams (HydroRIVERS) ----
+    ## ---- Streams (HydroRIVERS) ---
     streams <- Cache(
       prepInputs,
       url = "https://data.hydrosheds.org/file/HydroRIVERS/HydroRIVERS_v10_na_shp.zip",
