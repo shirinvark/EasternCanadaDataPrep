@@ -432,7 +432,8 @@ buildProvinces <- function(sim) {
   
   ##LCC
   ## LCC — upstream only
-  if (!is.null(sim$rstLCC)) {
+  if ("rstLCC" %in% names(sim) && !is.null(sim$rstLCC)) {
+    
     
     lcc <- sim$rstLCC
     
