@@ -236,11 +236,11 @@ buildPlanningGrid <- function(sim) {
   ## 8) save rasters
   ## -----------------------------
   out_dir <- file.path(outputPath(sim), "EasternCanadaDataPrep")
-  dir.create(out_dir, recursive = TRUE, showWarnings = FALSE)
+ # dir.create(out_dir, recursive = TRUE, showWarnings = FALSE)
   
   terra::writeRaster(
     planning,
-    file.path(out_dir, "PlanningRaster_250m.tif"),
+    file.path(out_dir, "PlanningRaster_250m.tif"),#file.path(out_dir, "PlanningRaster_250m.tif"),
     overwrite = TRUE
   )
   
@@ -331,7 +331,7 @@ buildProvinces <- function(sim) {
   ## ---------------------------------------------------------
   ## 1) Create studyArea if not provided by user
   ## ---------------------------------------------------------
-  if (is.null(sim$studyArea)) {
+  if (!SpaDES.core::suppliedElsewhere("studyArea")) {
     
     message("🔵 Creating default studyArea (Eastern Canada)...")
     
@@ -367,14 +367,14 @@ buildProvinces <- function(sim) {
   if (!SpaDES.core::suppliedElsewhere("CPCAD")){
     
     cpcad_dir <- file.path(dPath, "CPCAD")
-    dir.create(cpcad_dir, recursive = TRUE, showWarnings = FALSE)
+   # dir.create(cpcad_dir, recursive = TRUE, showWarnings = FALSE)
     
     message("▶ Preparing CPCAD...")
     
     sim$CPCAD <- Cache(
       prepInputs,
       url = "https://drive.google.com/uc?export=download&id=1ELIaRgO5PNgliGh0Tq2BI6V5654ydxYu",
-      destinationPath = cpcad_dir,
+      destinationPath = file.path(dPath, "CPCAD"),#cpcad_dir,
       targetFile = "CPCAD_2024.gpkg",
       fun = terra::vect,
       layer = "ProtectedConservedArea_2024 ProtectedConservedArea_2024",
@@ -410,14 +410,14 @@ buildProvinces <- function(sim) {
   if (!SpaDES.core::suppliedElsewhere("FMU")){
     
     fmu_dir <- file.path(dPath, "FMU")
-    dir.create(fmu_dir, recursive = TRUE, showWarnings = FALSE)
+   # dir.create(fmu_dir, recursive = TRUE, showWarnings = FALSE)
     
     message("▶ Preparing FMU...")
     
     sim$FMU <- Cache(
       prepInputs,
       url = "https://drive.google.com/uc?export=download&id=1qp4TRgFArANp1YNEoOpeuwLlM-khf4v1",
-      destinationPath = fmu_dir,
+      destinationPath = file.path(dPath, "FMU"),#fmu_dir,
       targetFile = "Forest_Management_Units_CA.gpkg",
       fun = terra::vect,
       cropTo    = studyArea_sf,
@@ -463,13 +463,13 @@ buildProvinces <- function(sim) {
     message("▶ Preparing Hydrology from HydroRIVERS, HydroLAKES, and HydroBASINS...")
     
     hydro_dir <- file.path(dPath, "Hydrology")
-    dir.create(hydro_dir, recursive = TRUE, showWarnings = FALSE)
+    #dir.create(hydro_dir, recursive = TRUE, showWarnings = FALSE)
     
     ## ---- Streams (HydroRIVERS) ---
     streams <- Cache(
       prepInputs,
       url = "https://data.hydrosheds.org/file/HydroRIVERS/HydroRIVERS_v10_na_shp.zip",
-      destinationPath = hydro_dir,
+      destinationPath = file.path(dPath, "Hydrology"),#hydro_dir,
       archive = "HydroRIVERS_v10_na_shp.zip",
       targetFile = "HydroRIVERS_v10_na_shp/HydroRIVERS_v10_na.shp",
       fun = terra::vect,
@@ -481,7 +481,7 @@ buildProvinces <- function(sim) {
     lakes <- Cache(
       prepInputs,
       url = "https://data.hydrosheds.org/file/hydrolakes/HydroLAKES_polys_v10_shp.zip",
-      destinationPath = hydro_dir,
+      destinationPath = file.path(dPath, "Hydrology"),#hydro_dir,
       archive = "HydroLAKES_polys_v10_shp.zip",
       targetFile = "HydroLAKES_polys_v10_shp/HydroLAKES_polys_v10.shp",
       fun = terra::vect,
@@ -493,7 +493,7 @@ buildProvinces <- function(sim) {
     basins <- Cache(
       prepInputs,
       url = "https://data.hydrosheds.org/file/HydroBASINS/standard/hybas_na_lev08_v1c.zip",
-      destinationPath = hydro_dir,
+      destinationPath = file.path(dPath, "Hydrology"),#hydro_dir,
       archive = "hybas_na_lev08_v1c.zip",
       targetFile = "hybas_na_lev08_v1c/hybas_na_lev08_v1c.shp",
       fun = terra::vect,
