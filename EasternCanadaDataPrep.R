@@ -364,7 +364,7 @@ buildProvinces <- function(sim) {
   ## ---------------------------------------------------------
   ## 2) CPCAD – Protected & conserved areas
   ## ---------------------------------------------------------
-  if (is.null(sim$CPCAD)) {
+  if (!SpaDES.core::suppliedElsewhere("CPCAD")){
     
     cpcad_dir <- file.path(dPath, "CPCAD")
     dir.create(cpcad_dir, recursive = TRUE, showWarnings = FALSE)
@@ -407,7 +407,7 @@ buildProvinces <- function(sim) {
   ## ---------------------------------------------------------
   ## 3) FMU – Forest Management Units
   ## ---------------------------------------------------------
-  if (is.null(sim$FMU)) {
+  if (!SpaDES.core::suppliedElsewhere("FMU")){
     
     fmu_dir <- file.path(dPath, "FMU")
     dir.create(fmu_dir, recursive = TRUE, showWarnings = FALSE)
@@ -454,8 +454,8 @@ buildProvinces <- function(sim) {
   ## Raw hydrology inputs only (no buffering, no policy)
   ## ---------------------------------------------------------
   
-  if (is.null(sim$Hydrology)) {
-    
+  if (!SpaDES.core::suppliedElsewhere("Hydrology_streams")) {
+ 
     message("▶ Preparing Hydrology from HydroRIVERS, HydroLAKES, and HydroBASINS...")
     
     hydro_dir <- file.path(dPath, "Hydrology")
