@@ -125,11 +125,12 @@ buildPlanningGrid <- function(sim) {
   ## -----------------------------
   ## sanity checks
   ## -----------------------------
-  if (is.null(sim$FMU))
-    stop("FMU is missing.")
+  if (!suppliedElsewhere("FMU"))
+    stop("FMU is missing or not supplied upstream.")
   
-  if (is.null(sim$CPCAD))
-    stop("CPCAD is missing.")
+  if (!suppliedElsewhere("CPCAD"))
+    stop("CPCAD is missing or not supplied upstream.")
+  
   
   ## -----------------------------
   ## inputs
