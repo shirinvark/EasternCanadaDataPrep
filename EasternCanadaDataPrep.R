@@ -454,8 +454,12 @@ buildProvinces <- function(sim) {
   ## Raw hydrology inputs only (no buffering, no policy)
   ## ---------------------------------------------------------
   
-  if (!SpaDES.core::suppliedElsewhere("Hydrology_streams")) {
- 
+  if (
+    !SpaDES.core::suppliedElsewhere("Hydrology_streams") ||
+    !SpaDES.core::suppliedElsewhere("Hydrology_lakes")   ||
+    !SpaDES.core::suppliedElsewhere("Hydrology_basins")
+  ) {
+    
     message("▶ Preparing Hydrology from HydroRIVERS, HydroLAKES, and HydroBASINS...")
     
     hydro_dir <- file.path(dPath, "Hydrology")
