@@ -432,7 +432,7 @@ buildProvinces <- function(sim) {
   
   ##LCC
   ## LCC — upstream only
-  if ("rstLCC" %in% names(sim) && !is.null(sim$rstLCC)) {
+  if (SpaDES.core::suppliedElsewhere("rstLCC")) {
     
     
     lcc <- sim$rstLCC
