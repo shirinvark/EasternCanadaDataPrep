@@ -55,12 +55,6 @@ defineModule(sim, list(
       objectClass = "SpatRaster",
       desc = "Classified land cover raster (upstream)(forest / non-forest)",
       sourceURL = NA
-    ),
-    expectsInput(
-      "Hydrology",
-      objectClass = "list",
-      desc = "hydrology raw (streams)",
-      sourceURL = NA
     )
   ),
   outputObjects = bindrows(
@@ -74,7 +68,24 @@ defineModule(sim, list(
       objectName  = "Provinces",
       objectClass = c("sf", "SpatVector"),
       desc        = "Canadian provincial boundaries (ON, QC, NB, NS, PE, NL) cropped to study area"
+    ),createsOutput(
+      objectName  = "Hydrology_streams",
+      objectClass = "SpatVector",
+      desc        = "Raw stream network from HydroRIVERS"
     ),
+    
+    createsOutput(
+      objectName  = "Hydrology_lakes",
+      objectClass = "SpatVector",
+      desc        = "Raw lake polygons from HydroLAKES"
+    ),
+    
+    createsOutput(
+      objectName  = "Hydrology_basins",
+      objectClass = "SpatVector",
+      desc        = "HydroBASINS level 8 polygons"
+    ),
+    
     
     createsOutput(
       objectName = "PlanningRaster",
@@ -487,6 +498,8 @@ buildProvinces <- function(sim) {
     )
     
     ## ---- Assemble hydrology object (internal structure) ----
+    ## Internal grouping only — downstream modules use exposed objects
+    
     sim$Hydrology <- list(
       source  = c(
         "HydroRIVERS_v10_na",
