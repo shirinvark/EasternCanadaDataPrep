@@ -232,7 +232,7 @@ buildPlanningGrid <- function(sim) {
     # LandCover and forest masks are provided by downstream DataPrep modules
   )
   
-  ## -----------------------------
+  ## ----------------------------
   ## 8) save rasters
   ## -----------------------------
   out_dir <- file.path(outputPath(sim), "EasternCanadaDataPrep")

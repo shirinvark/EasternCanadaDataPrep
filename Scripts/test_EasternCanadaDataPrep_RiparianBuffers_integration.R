@@ -84,7 +84,7 @@ ls(sim)
 # Provinces (باید فقط ON باشه)
 unique(sim$Provinces$jurisdiction)
 
-# Planning raster (extent باید Sudbury FMU باشه)
+# Planning raster 
 sim$PlanningRaster
 
 # Hydrology structure
