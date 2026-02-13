@@ -19,7 +19,7 @@ EasternCanadaInit <- function(sim) {
   ## ---------------------------------------------------------
   ## 2) Planning grid & landbase (heavy raster work)
   ## ---------------------------------------------------------
-  sim <- buildPlanningGrid(sim)
+  sim <- PlanningGrid_250m(sim)
   
   invisible(sim)
 }

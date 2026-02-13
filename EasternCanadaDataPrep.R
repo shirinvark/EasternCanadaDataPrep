@@ -60,15 +60,16 @@ defineModule(sim, list(
   outputObjects = bindrows(
     
     createsOutput(
-      objectName = "EasternCanadaLandbase",
+      objectName = "LegalConstraints",
       objectClass = "list",
-      desc = "A list containing spatial constraints and derived landbase products for Eastern Canada."
+      desc = "Legal and administrative spatial constraints derived from FMUs and protected areas."
     ),
     createsOutput(
       objectName  = "Provinces",
       objectClass = c("sf", "SpatVector"),
       desc        = "Canadian provincial boundaries (ON, QC, NB, NS, PE, NL) cropped to study area"
-    ),createsOutput(
+    ),
+    createsOutput(
       objectName  = "Hydrology_streams",
       objectClass = "SpatVector",
       desc        = "Raw stream network from HydroRIVERS"
@@ -88,9 +89,9 @@ defineModule(sim, list(
     
     
     createsOutput(
-      objectName = "PlanningRaster",
+      objectName = "PlanningGrid_250m",
       objectClass = "SpatRaster",
-      desc = "Planning raster used for landbase accounting and downstream AAC calculations."
+      desc = "PlanningGrid_250m used for landbase accounting and downstream AAC calculations."
     )
     
   )
@@ -108,8 +109,7 @@ doEvent.EasternCanadaDataPrep <- function(sim, eventTime, eventType) {
   invisible(sim)
 }
 
-## Build the planning raster and core landbase components.
-##
+## Build the PlanningGrid_250m and core landbase components.
 ## This function establishes the spatial analysis grid and
 ## derives legal/managerial constraints (FMUs, protected areas).
 ##
@@ -120,7 +120,7 @@ doEvent.EasternCanadaDataPrep <- function(sim, eventTime, eventType) {
 
 buildPlanningGrid <- function(sim) {
   
-  message("🔵 Building planning raster & landbase accounting table...")
+  message("🔵 Building PlanningGrid_250m & landbase accounting table...")
   
   ## -----------------------------
   ## sanity checks
@@ -138,7 +138,7 @@ buildPlanningGrid <- function(sim) {
   fmu      <- sim$FMU
   cpcad    <- sim$CPCAD
   ## -----------------------------
-  ## 1) planning raster (NO land cover)
+  ## 1) PlanningGrid_250m (NO land cover)
   ## -----------------------------
   study_v <- terra::vect(sim$studyArea)
   
@@ -151,7 +151,7 @@ buildPlanningGrid <- function(sim) {
   
   values(planning) <- NA
   
-  sim$PlanningRaster <- planning
+  sim$PlanningGrid_250m <- planning
   
   ## -----------------------------
   ## 2) rasterize FMU
@@ -195,19 +195,19 @@ buildPlanningGrid <- function(sim) {
   )
   
   if (all(is.na(terra::values(prot_r)))) {
-    message("ℹ️ No CPCAD intersects planning raster — protected set to 0")
+    message("ℹ️ No CPCAD intersects PlanningGrid_250m — protected set to 0")
     terra::values(prot_r) <- 0
   }
   
   ## -----------------------------
-  ## 4) harvestable mask (LEGAL / MANAGERIAL)
+  ## 4) LegalHarvestMask_250m (LEGAL / MANAGERIAL)
   ## -----------------------------
   ## This mask reflects only legal and administrative constraints
   ## (FMU presence and protected areas).
   ##
   ## It does NOT represent ecological suitability, operability,
   ## or harvest decisions. Those are deferred to downstream modules.
-  harvestable_mask <- terra::ifel(
+  LegalHarvestMask_250m<- terra::ifel(
     !is.na(fmu_r) & prot_r == 0,
     1,
     0
@@ -226,10 +226,9 @@ buildPlanningGrid <- function(sim) {
   ## -----------------------------
   ## 7) assemble output object
   ## -----------------------------
-  sim$EasternCanadaLandbase <- list(
-    PlanningRaster     = planning,
-    FMU_raster         = fmu_r,
-    HarvestableMask    = harvestable_mask
+  sim$LegalConstraints <- list(
+    FMU_Raster_250m         = fmu_r,
+    LegalHarvestMask_250m    = LegalHarvestMask_250m
     # LandCover and forest masks are provided by downstream DataPrep modules
   )
   
@@ -241,13 +240,13 @@ buildPlanningGrid <- function(sim) {
   
   terra::writeRaster(
     planning,
-    file.path(out_dir, "PlanningRaster_250m.tif"),#file.path(out_dir, "PlanningRaster_250m.tif"),
+    file.path(out_dir, "PlanningGrid_250m.tif"),#file.path(out_dir, "PlanningGrid_250m.tif"),
     overwrite = TRUE
   )
   
   terra::writeRaster(
-    harvestable_mask,
-    file.path(out_dir, "HarvestableMask_250m.tif"),
+    LegalHarvestMask_250m,
+    file.path(out_dir, "LegalHarvestMask_250m.tif"),
     overwrite = TRUE,
     datatype = "INT1U"
   )

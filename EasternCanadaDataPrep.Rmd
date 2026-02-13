@@ -53,7 +53,7 @@ To answer this question, the module:
 - Harmonizes all spatial inputs to a common projection  
 - Prepares administrative boundaries (FMUs)  
 - Applies legal exclusions (protected and conserved areas)  
-- Constructs a coarse-resolution planning raster  
+- Constructs a coarse-resolution PlanningGrid_250m 
 - Prepares raw hydrology inputs for downstream processing  
 
 ---
@@ -64,8 +64,9 @@ To answer this question, the module:
 ✔ Loads and harmonizes Forest Management Units (FMUs)  
 ✔ Loads and filters protected and conserved areas (CPCAD)  
 ✔ Prepares raw hydrology vector inputs  
-✔ Constructs a planning raster (default: 250 m)  
-✔ Creates a legal harvestable mask  
+✔ Constructs a PlanningGrid_250m (default: 250 m)  
+✔ Creates a legal LegalHarvestMask_250m
+ 
 
 ---
 
@@ -200,17 +201,17 @@ Within EasternCanadaDataPrep, land cover is handled **spatially only**:
 
 - Reprojection to the study area CRS  
 - Cropping and masking to the study area extent  
-- Alignment to the PlanningRaster grid  
+- Alignment to the PlanningGrid_250m  
 
 The harmonized raster is exposed as:
 
 `sim$LandCoverAligned`
 
-Land cover is not required to construct the legal harvestable mask in this module.
+Land cover is not required to construct the LegalHarvestMask_250m in this module.
 
 
-## Planning raster
-The planning raster is a coarse-resolution grid (default: 250 m)
+## PlanningGrid_250m
+The PlanningGrid_250m is a coarse-resolution grid (default: 250 m)
 that defines the spatial units used by downstream models.
 
 It is constructed from:
@@ -224,8 +225,8 @@ The project CRS
 No land-cover, forest-type, or ecological information is used
 at this stage.
 
-## Legal harvestable mask
-A binary harvestable mask is created where:
+## LegalHarvestMask_250m
+A binary LegalHarvestMask_250m is created where:
 
 Cells fall inside an FMU, and
 
@@ -239,17 +240,17 @@ Primary outputs include:
 
 | Output | Type | Description |
 |------|------|-------------|
-| PlanningRaster | SpatRaster | Coarse-resolution planning grid |
-| EasternCanadaLandbase | list | Planning grid and legal availability masks |
+| PlanningGrid_250m | SpatRaster | Coarse-resolution planning grid |
+| LegalConstraints | list | Planning grid and legal availability masks |
 | Provinces | SpatVector | Provincial boundaries cropped to the study area |
-| LandCoverAligned | SpatRaster | Spatially harmonized land cover (if provided) |
+| LandCover | SpatRaster | Spatially harmonized land cover (if provided) |
 
 The landbase object has the structure:
 ```{r landbase_structure, eval=FALSE}
 sim$EasternCanadaLandbase <- list(
-  PlanningRaster  = "<SpatRaster>",
-  FMU_raster      = "<SpatRaster>",
-  HarvestableMask = "<SpatRaster>"
+  PlanningGrid_250m  = "<SpatRaster>",
+  FMU_Raster_250m      = "<SpatRaster>",
+  LegalHarvestMask_250m = "<SpatRaster>"
 )
 ```
 ## Example usage
