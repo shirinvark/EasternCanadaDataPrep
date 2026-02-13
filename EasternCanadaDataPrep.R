@@ -432,18 +432,46 @@ buildProvinces <- function(sim) {
   
   ##LCC
   ## LCC — upstream only
-  if (SpaDES.core::suppliedElsewhere("rstLCC")) {
+  #if (SpaDES.core::suppliedElsewhere("rstLCC")) {
     
     
-    lcc <- sim$rstLCC
+    #lcc <- sim$rstLCC
     
-    if (!terra::same.crs(lcc, studyArea_v)) {
-      lcc <- terra::project(lcc, studyArea_v)
-    }
+    #if (!terra::same.crs(lcc, studyArea_v)) {
+     # lcc <- terra::project(lcc, studyArea_v)
+   # }
     
-    lcc <- terra::crop(lcc, studyArea_v)
+    #lcc <- terra::crop(lcc, studyArea_v)
+    
+    #sim$rstLCC <- lcc
+  ## LCC — upstream or download via LandR
+  
+  if (!SpaDES.core::suppliedElsewhere("rstLCC")) {
+    
+    message("🔵 rstLCC not supplied upstream — downloading via SCANFI (LandR)...")
+    
+    ## use small template raster (studyArea) for initial processing
+    lcc <- LandR::prepInputs_SCANFI_LCC_FAO(
+      to = studyArea_v
+    )
     
     sim$rstLCC <- lcc
+    
+  } else {
+    
+    message("🔵 rstLCC supplied upstream — using existing object.")
+    lcc <- sim$rstLCC
+  }
+  
+  ## ---- Harmonize CRS & extent ----
+  if (!terra::same.crs(lcc, studyArea_v)) {
+    lcc <- terra::project(lcc, studyArea_v)
+  }
+  
+  lcc <- terra::crop(lcc, studyArea_v)
+  
+  sim$rstLCC <- lcc
+  
   }
   
   ## ---------------------------------------------------------
