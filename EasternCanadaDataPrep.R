@@ -444,35 +444,33 @@ buildProvinces <- function(sim) {
     #lcc <- terra::crop(lcc, studyArea_v)
     
     #sim$rstLCC <- lcc
-  ## LCC — upstream or download via LandR
-  
-  if (!SpaDES.core::suppliedElsewhere("rstLCC")) {
+  ## ---- LandCover (SCANFI) ----
+  if (!SpaDES.core::suppliedElsewhere("LandCover")) {
     
-    message("🔵 rstLCC not supplied upstream — downloading via SCANFI (LandR)...")
+    message("Creating LandCover from SCANFI")
     
-    ## use small template raster (studyArea) for initial processing
-    lcc <- LandR::prepInputs_SCANFI_LCC_FAO(
-      to = studyArea_v
+    dPath <- file.path(sim@paths$inputPath, "LandCover")
+    if (!dir.exists(dPath)) dir.create(dPath, recursive = TRUE)
+    
+    sim$LandCover <- LandR::prepInputs_SCANFI_LCC_FAO(
+      rasterToMatch   = sim$PlanningGrid_250m,
+      studyArea       = sim$studyArea,
+      destinationPath = dPath
     )
-    
-    sim$rstLCC <- lcc
-    
-  } else {
-    
-    message("🔵 rstLCC supplied upstream — using existing object.")
-    lcc <- sim$rstLCC
   }
   
   ## ---- Harmonize CRS & extent ----
-  if (!terra::same.crs(lcc, studyArea_v)) {
-    lcc <- terra::project(lcc, studyArea_v)
+  LandCover <- sim$LandCover
+  studyArea_v <- sim$studyArea
+  
+  if (!terra::same.crs(LandCover, studyArea_v)) {
+    LandCover <- terra::project(LandCover, studyArea_v)
   }
   
-  lcc <- terra::crop(lcc, studyArea_v)
+  LandCover <- terra::crop(LandCover, studyArea_v)
   
-  sim$rstLCC <- lcc
+  sim$LandCover <- LandCover
   
-  }
   
   ## ---------------------------------------------------------
   ## 4) Hydrology – HydroRIVERS + HydroLAKES
@@ -556,18 +554,12 @@ buildProvinces <- function(sim) {
       nrow(lakes), " lake features, ",
       nrow(basins), " basin polygons."
     )
-  }
+  
   
   return(invisible(sim))
   
+  }
 }
-## Summary:
-## EasternCanadaDataPrep standardizes spatial inputs and
-## exposes clean, reusable objects for downstream analysis.
-##
-## Policy interpretation, ecological modeling, and harvest
-## decisions are intentionally excluded from this module.
-
 ggplotFn <- function(data, ...) {
   ggplot2::ggplot(data, ggplot2::aes(TheSample)) +
     ggplot2::geom_histogram(...)
