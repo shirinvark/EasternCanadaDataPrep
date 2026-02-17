@@ -236,7 +236,7 @@ buildPlanningGrid <- function(sim) {
   ## 8) save rasters
   ## -----------------------------
   out_dir <- file.path(outputPath(sim), "EasternCanadaDataPrep")
- # dir.create(out_dir, recursive = TRUE, showWarnings = FALSE)
+ dir.create(out_dir, recursive = TRUE, showWarnings = FALSE)
   
   terra::writeRaster(
     planning,
