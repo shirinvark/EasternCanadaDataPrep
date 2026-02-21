@@ -15,8 +15,14 @@ defineModule(sim, list(
   timeunit = "year",
   citation = list("citation.bib"),
   documentation = list("NEWS.md", "README.md", "EasternCanadaDataPrep.Rmd"),
-  reqdPkgs = list("SpaDES.core (>= 2.1.8.9001)", "ggplot2", "reproducible", "sf", "terra"),
-  parameters = bindrows(
+  reqdPkgs = list(
+    "SpaDES.core (>= 2.1.8.9001)",
+    "ggplot2",
+    "reproducible",
+    "sf",
+    "terra",
+    "LandR"
+  ),  parameters = bindrows(
     #defineParameter("paramName", "paramClass", value, min, max, "parameter description"),
     defineParameter(".plots", "character", "screen", NA, NA,
                     "Used by Plots function, which can be optionally used here"),
