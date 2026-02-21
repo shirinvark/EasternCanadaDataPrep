@@ -50,12 +50,7 @@ defineModule(sim, list(
     expectsInput("studyArea", objectClass = c("sf", "SpatVector"), desc = "Study area polygon used for cropping and masking", sourceURL = NA),
     expectsInput("CPCAD",objectClass = c("sf", "SpatVector"), desc = "CPCAD protected areas — generated inside this module", sourceURL = NA),
     expectsInput("FMU",objectClass = c("sf", "SpatVector"), desc = "Forest Management Units — generated inside this module",sourceURL = NA),
-    expectsInput(
-      "rstLCC",
-      objectClass = "SpatRaster",
-      desc = "Classified land cover raster (upstream)(forest / non-forest)",
-      sourceURL = NA
-    )
+    expectsInput("LandCover", objectClass = "SpatRaster", desc = "SCANFI land cover raster supplied from upstream module",sourceURL = NA),
   ),
   outputObjects = bindrows(
     
@@ -94,7 +89,7 @@ defineModule(sim, list(
       desc = "PlanningGrid_250m used for landbase accounting and downstream AAC calculations."
     )
     
-  )
+  
   
 ))
 
@@ -445,31 +440,38 @@ buildProvinces <- function(sim) {
     
     #sim$rstLCC <- lcc
   ## ---- LandCover (SCANFI) ----
-  if (!SpaDES.core::suppliedElsewhere("LandCover")) {
+  ## ---------------------------------------------------------
+  ## 3b) LandCover – SCANFI LCC
+  ## ---------------------------------------------------------
+  
+  if (SpaDES.core::suppliedElsewhere("LandCover")) {
     
-    message("Creating LandCover from SCANFI")
+    message("✔ Using LandCover supplied from upstream module.")
     
-    dPath <- file.path(sim@paths$inputPath, "LandCover")
-    if (!dir.exists(dPath)) dir.create(dPath, recursive = TRUE)
+    lc <- sim$LandCover
     
-    sim$LandCover <- LandR::prepInputs_SCANFI_LCC_FAO(
-      rasterToMatch   = sim$PlanningGrid_250m,
-      studyArea       = sim$studyArea,
-      destinationPath = dPath
+  } else {
+    
+    message("⚠ LandCover not supplied. Creating SCANFI LCC (standalone mode).")
+    
+    lc_dir <- file.path(dPath, "LandCover")
+    if (!dir.exists(lc_dir)) dir.create(lc_dir, recursive = TRUE)
+    
+    lc <- LandR::prepInputs_SCANFI_LCC(
+      studyArea       = studyArea_sf,
+      destinationPath = lc_dir
     )
   }
-  
+
   ## ---- Harmonize CRS & extent ----
-  LandCover <- sim$LandCover
-  studyArea_v <- sim$studyArea
   
-  if (!terra::same.crs(LandCover, studyArea_v)) {
-    LandCover <- terra::project(LandCover, studyArea_v)
+  if (!terra::same.crs(lc, studyArea_v)) {
+    lc <- terra::project(lc, studyArea_v)
   }
   
-  LandCover <- terra::crop(LandCover, studyArea_v)
+  lc <- terra::crop(lc, studyArea_v)
   
-  sim$LandCover <- LandCover
+  sim$LandCover <- lc
   
   
   ## ---------------------------------------------------------
@@ -480,13 +482,11 @@ buildProvinces <- function(sim) {
   ## 4) Hydrology – HydroRIVERS + HydroLAKES + HydroBASINS
   ## Raw hydrology inputs only (no buffering, no policy)
   ## ---------------------------------------------------------
-  
   if (
     !SpaDES.core::suppliedElsewhere("Hydrology_streams") ||
     !SpaDES.core::suppliedElsewhere("Hydrology_lakes")   ||
     !SpaDES.core::suppliedElsewhere("Hydrology_basins")
-  ) {
-    
+  )
     message("▶ Preparing Hydrology from HydroRIVERS, HydroLAKES, and HydroBASINS...")
     
     hydro_dir <- file.path(dPath, "Hydrology")
@@ -557,9 +557,9 @@ buildProvinces <- function(sim) {
   
   
   return(invisible(sim))
-  
+
   }
-}
+
 ggplotFn <- function(data, ...) {
   ggplot2::ggplot(data, ggplot2::aes(TheSample)) +
     ggplot2::geom_histogram(...)
