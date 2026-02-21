@@ -464,14 +464,15 @@ buildProvinces <- function(sim) {
   
   ## ---- Harmonize CRS & extent ----
   
+  ## ---- Harmonize CRS & extent ----
+  
   if (!terra::same.crs(lc, studyArea_v)) {
+    message("Reprojecting LandCover to studyArea CRS...")
     lc <- terra::project(lc, studyArea_v)
   }
   
+  message("Cropping LandCover to studyArea...")
   lc <- terra::crop(lc, studyArea_v)
-  
-  sim$LandCover <- lc
-  
   
   ## ---------------------------------------------------------
   ## 4) Hydrology – HydroRIVERS + HydroLAKES
