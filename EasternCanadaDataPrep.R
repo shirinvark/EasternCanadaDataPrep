@@ -50,7 +50,7 @@ defineModule(sim, list(
     expectsInput("studyArea", objectClass = c("sf", "SpatVector"), desc = "Study area polygon used for cropping and masking", sourceURL = NA),
     expectsInput("CPCAD",objectClass = c("sf", "SpatVector"), desc = "CPCAD protected areas — generated inside this module", sourceURL = NA),
     expectsInput("FMU",objectClass = c("sf", "SpatVector"), desc = "Forest Management Units — generated inside this module",sourceURL = NA),
-    expectsInput("LandCover", objectClass = "SpatRaster", desc = "SCANFI land cover raster supplied from upstream module",sourceURL = NA),
+    expectsInput("LandCover", objectClass = "SpatRaster", desc = "SCANFI land cover raster supplied from upstream module",sourceURL = NA)
   ),
   outputObjects = bindrows(
     
@@ -89,9 +89,7 @@ defineModule(sim, list(
       desc = "PlanningGrid_250m used for landbase accounting and downstream AAC calculations."
     )
     
-  
-  
-))
+)))
 
 doEvent.EasternCanadaDataPrep <- function(sim, eventTime, eventType) {
   switch(
@@ -482,11 +480,7 @@ buildProvinces <- function(sim) {
   ## 4) Hydrology – HydroRIVERS + HydroLAKES + HydroBASINS
   ## Raw hydrology inputs only (no buffering, no policy)
   ## ---------------------------------------------------------
-  if (
-    !SpaDES.core::suppliedElsewhere("Hydrology_streams") ||
-    !SpaDES.core::suppliedElsewhere("Hydrology_lakes")   ||
-    !SpaDES.core::suppliedElsewhere("Hydrology_basins")
-  )
+ 
     message("▶ Preparing Hydrology from HydroRIVERS, HydroLAKES, and HydroBASINS...")
     
     hydro_dir <- file.path(dPath, "Hydrology")
