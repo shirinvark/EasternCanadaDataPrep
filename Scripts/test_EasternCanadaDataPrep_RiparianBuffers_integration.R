@@ -95,4 +95,3 @@ names(sim$Riparian)
 plot(sim$Riparian$riparianFraction, main = "Riparian fraction – Sudbury FMU")
 
 message("✅ DataPrep + RiparianBuffers pipeline ran successfully (Sudbury FMU)")
-

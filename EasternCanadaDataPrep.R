@@ -20,8 +20,7 @@ defineModule(sim, list(
     "ggplot2",
     "reproducible",
     "sf",
-    "terra",
-    "LandR"
+    "terra"
   ),  parameters = bindrows(
     #defineParameter("paramName", "paramClass", value, min, max, "parameter description"),
     defineParameter(".plots", "character", "screen", NA, NA,
@@ -448,25 +447,21 @@ buildProvinces <- function(sim) {
   ## 3b) LandCover – SCANFI LCC
   ## ---------------------------------------------------------
   
+  ## ---------------------------------------------------------
+  ## 3b) LandCover – supplied externally only
+  ## ---------------------------------------------------------
+  
   if (SpaDES.core::suppliedElsewhere("LandCover")) {
     
-    message("✔ Using LandCover supplied from upstream module.")
-    
+    message("✔ Using LandCover supplied externally.")
     lc <- sim$LandCover
     
   } else {
     
-    message("⚠ LandCover not supplied. Creating SCANFI LCC (standalone mode).")
+    stop("LandCover must be supplied via simInit() or an upstream module.")
     
-    lc_dir <- file.path(dPath, "LandCover")
-    if (!dir.exists(lc_dir)) dir.create(lc_dir, recursive = TRUE)
-    
-    lc <- LandR::prepInputs_SCANFI_LCC(
-      studyArea       = studyArea_sf,
-      destinationPath = lc_dir
-    )
   }
-
+  
   ## ---- Harmonize CRS & extent ----
   
   if (!terra::same.crs(lc, studyArea_v)) {

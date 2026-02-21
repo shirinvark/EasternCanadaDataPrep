@@ -29,45 +29,44 @@ SpaDES.project::getModule(
 )
 
 ## =========================================================
-## 3) INIT + RUN SIMULATION
+## 3) LOAD LandCover (MANDATORY in method 2)
+## =========================================================
+lc <- terra::rast(
+  "E:/MODULES_TESTS/SCANFI_att_nfiLandCover_CanadaLCCclassCodes_S_2010_v1_1.tif"
+)
+
+## =========================================================
+## 4) INIT + RUN SIMULATION
 ## =========================================================
 sim <- simInit(
   times   = list(start = 1, end = 1),
-  modules = "EasternCanadaDataPrep"
+  modules = "EasternCanadaDataPrep",
+  objects = list(
+    LandCover = lc
+  )
 )
 
 sim <- spades(sim)
 
 ## =========================================================
-## 4) CHECK OUTPUTS
+## 5) CHECK OUTPUTS
 ## =========================================================
 names(sim)
 
-## اگر این وجود داره:
-names(sim$EasternCanadaLandbase)
-
-## Provinces رو امن چک کن
+## Provinces check (safe)
 if ("Provinces" %in% names(sim)) {
-  names(sim$Provinces)
-  unique(sf::st_drop_geometry(sim$Provinces)[, 1])
+  print(names(sim$Provinces))
+  print(unique(sim$Provinces$jurisdiction))
 } else {
   stop("❌ Provinces object was not created by EasternCanadaDataPrep")
 }
-library(sf)
 
-prov <- rnaturalearth::ne_states(
-  country = "Canada",
-  returnclass = "sf"
-)
+## Planning grid check
+if ("PlanningGrid_250m" %in% names(sim)) {
+  plot(sim$PlanningGrid_250m)
+}
 
-east <- prov[prov$name_en %in% c(
-  "Ontario",
-  "Quebec",
-  "New Brunswick",
-  "Nova Scotia",
-  "Prince Edward Island",
-  "Newfoundland and Labrador"
-), ]
-
-unique(east$name_en)
-
+## Legal mask check
+if ("LegalConstraints" %in% names(sim)) {
+  plot(sim$LegalConstraints$LegalHarvestMask_250m)
+}
