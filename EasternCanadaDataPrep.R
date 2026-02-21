@@ -3,7 +3,7 @@
 ## To use objects, use `sim$xxx` (they are globally available to all modules).
 ## Functions can be used inside any function that was sourced in this module;
 ## they are namespaced to the module, just like functions in R packages.
-## If exact location is required, functions will be: `sim$.mods$<moduleName>$FunctionName`.
+## If exact location is required, functions will be: `sim$.mods$<moduleName>$FunctionName
 defineModule(sim, list(
   name = "EasternCanadaDataPrep",
   description = "Loads and prepares spatial inputs (FMUs, protected areas, hydrology) for downstream landbase and harvesting analyses.",
