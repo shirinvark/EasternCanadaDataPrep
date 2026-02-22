@@ -2,7 +2,7 @@ EasternCanadaInit <- function(sim) {
   
   message("🔵 init: building Eastern Canada spatial products")
   
-  ## ---------------------------------------------------------
+  ## --------------------------------------------------------
   ## sanity checks (fail early, fail loud)
   ## ---------------------------------------------------------
   stopifnot(

@@ -70,3 +70,4 @@ if ("PlanningGrid_250m" %in% names(sim)) {
 if ("LegalConstraints" %in% names(sim)) {
   plot(sim$LegalConstraints$LegalHarvestMask_250m)
 }
+

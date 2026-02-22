@@ -48,7 +48,7 @@ getModule(
     "shirinvark/RiparianBuffers"
   ),
   modulePath = getPaths()$modulePath,
-  overwrite  = TRUE
+  overwrite  = FALSE
 )
 
 ## =========================================================
@@ -85,13 +85,12 @@ ls(sim)
 unique(sim$Provinces$jurisdiction)
 
 # Planning raster 
-sim$PlanningRaster
-
+sim$PlanningGrid_250m
 # Hydrology structure
 names(sim$Hydrology)
 
 # Riparian output
-names(sim$Riparian)
+sim$Riparian
 plot(sim$Riparian$riparianFraction, main = "Riparian fraction – Sudbury FMU")
 
 message("✅ DataPrep + RiparianBuffers pipeline ran successfully (Sudbury FMU)")
