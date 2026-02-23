@@ -20,7 +20,8 @@ defineModule(sim, list(
     "ggplot2",
     "reproducible",
     "sf",
-    "terra"
+    "terra",
+    "rnaturalearth"
   ),  parameters = bindrows(
     #defineParameter("paramName", "paramClass", value, min, max, "parameter description"),
     defineParameter(".plots", "character", "screen", NA, NA,
