@@ -54,9 +54,7 @@ defineModule(sim, list(
     #expectsInput("objectName", "objectClass", "input object description", sourceURL, ...),
     expectsInput("studyArea", objectClass = c("sf", "SpatVector"), desc = "Study area polygon used for cropping and masking", sourceURL = NA),
     expectsInput("CPCAD",objectClass = c("sf", "SpatVector"), desc = "CPCAD protected areas — generated inside this module", sourceURL = NA),
-    expectsInput("FMU",objectClass = c("sf", "SpatVector"), desc = "Forest Management Units — generated inside this module",sourceURL = NA),
-    expectsInput("LandCover", objectClass = "SpatRaster", desc = "SCANFI land cover raster supplied from upstream module",sourceURL = NA)
-  ),
+    expectsInput("FMU",objectClass = c("sf", "SpatVector"), desc = "Forest Management Units — generated inside this module",sourceURL = NA)),
   outputObjects = bindrows(
     
     createsOutput(
@@ -64,30 +62,6 @@ defineModule(sim, list(
       objectClass = "list",
       desc = "Legal and administrative spatial constraints derived from FMUs and protected areas."
     ),
-    createsOutput(
-      objectName  = "Provinces",
-      objectClass = c("sf", "SpatVector"),
-      desc        = "Canadian provincial boundaries (ON, QC, NB, NS, PE, NL) cropped to study area"
-    ),
-    createsOutput(
-      objectName  = "Hydrology_streams",
-      objectClass = "SpatVector",
-      desc        = "Raw stream network from HydroRIVERS"
-    ),
-    
-    createsOutput(
-      objectName  = "Hydrology_lakes",
-      objectClass = "SpatVector",
-      desc        = "Raw lake polygons from HydroLAKES"
-    ),
-    
-    createsOutput(
-      objectName  = "Hydrology_basins",
-      objectClass = "SpatVector",
-      desc        = "HydroBASINS level 8 polygons"
-    ),
-    
-    
     createsOutput(
       objectName = "PlanningGrid_250m",
       objectClass = "SpatRaster",
@@ -116,143 +90,7 @@ doEvent.EasternCanadaDataPrep <- function(sim, eventTime, eventType) {
 ## - No harvest or policy decisions are applied
 ## - Outputs are intended for reuse by multiple downstream modules
 
-buildPlanningGrid <- function(sim) {
-  
-  message("🔵 Building PlanningGrid_250m & landbase accounting table...")
-  
-  ## -----------------------------
-  ## sanity checks
-  ## -----------------------------
-  if (!suppliedElsewhere("FMU"))
-    stop("FMU is missing or not supplied upstream.")
-  
-  if (!suppliedElsewhere("CPCAD"))
-    stop("CPCAD is missing or not supplied upstream.")
-  
-  
-  ## -----------------------------
-  ## inputs
-  ## -----------------------------
-  fmu      <- sim$FMU
-  cpcad    <- sim$CPCAD
-  ## -----------------------------
-  ## 1) PlanningGrid_250m (NO land cover)
-  ## -----------------------------
-  study_v <- terra::vect(sim$studyArea)
-  
-  planning <- terra::rast(
-    study_v,
-    resolution = 250,
-    crs = terra::crs(study_v)
-  )
-  
-  
-  values(planning) <- NA
-  
-  sim$PlanningGrid_250m <- planning
-  
-  ## -----------------------------
-  ## 2) rasterize FMU
-  ## -----------------------------
-  if (!"FMU_ID" %in% names(fmu)) {
-    fmu$FMU_ID <- seq_len(nrow(fmu))
-  }
-  
-  if (!terra::same.crs(fmu, planning)) {
-    fmu <- terra::project(fmu, planning)
-  }
-  
-  if (!terra::same.crs(cpcad, planning)) {
-    cpcad <- terra::project(cpcad, planning)
-  }
-  
-  # Raster–polygon assignment uses the center-of-pixel rule:
-  # a cell is assigned to an FMU only if its cell center falls within the FMU polygon.
-  fmu_r <- terra::rasterize(
-    fmu,
-    planning,
-    field = "FMU_ID",
-    touches = FALSE
-  )
-  
-  if (all(is.na(terra::values(fmu_r)))) {
-    stop(
-      "FMU rasterization failed: all cells are NA.\n",
-      "Check CRS, extent, or resolution."
-    )
-  }
-  
-  ## -----------------------------
-  ## 3) rasterize protected areas
-  ## -----------------------------
-  prot_r <- terra::rasterize(
-    cpcad,
-    planning,
-    field = 1,
-    background = 0
-  )
-  
-  if (all(is.na(terra::values(prot_r)))) {
-    message("ℹ️ No CPCAD intersects PlanningGrid_250m — protected set to 0")
-    terra::values(prot_r) <- 0
-  }
-  
-  ## -----------------------------
-  ## 4) LegalHarvestMask_250m (LEGAL / MANAGERIAL)
-  ## -----------------------------
-  ## This mask reflects only legal and administrative constraints
-  ## (FMU presence and protected areas).
-  ##
-  ## It does NOT represent ecological suitability, operability,
-  ## or harvest decisions. Those are deferred to downstream modules.
-  LegalHarvestMask_250m<- terra::ifel(
-    !is.na(fmu_r) & prot_r == 0,
-    1,
-    0
-  )
-  
-  ## -----------------------------
-  ## diagnostics
-  ## -----------------------------
-  message("---- DIAGNOSTIC CHECK ----")
-  message("planning cells  = ", terra::ncell(planning))
-  message("FMU NA cells    = ", sum(is.na(terra::values(fmu_r))))
-  message("Protected cells = ", sum(terra::values(prot_r) == 1, na.rm = TRUE))
-  message("---- END DIAGNOSTIC ----")
-  
-  
-  ## -----------------------------
-  ## 7) assemble output object
-  ## -----------------------------
-  sim$LegalConstraints <- list(
-    FMU_Raster_250m         = fmu_r,
-    LegalHarvestMask_250m    = LegalHarvestMask_250m
-    # LandCover and forest masks are provided by downstream DataPrep modules
-  )
-  
-  ## ----------------------------
-  ## 8) save rasters
-  ## -----------------------------
-  out_dir <- file.path(outputPath(sim), "EasternCanadaDataPrep")
- dir.create(out_dir, recursive = TRUE, showWarnings = FALSE)
-  
-  terra::writeRaster(
-    planning,
-    file.path(out_dir, "PlanningGrid_250m.tif"),#file.path(out_dir, "PlanningGrid_250m.tif"),
-    overwrite = TRUE
-  )
-  
-  terra::writeRaster(
-    LegalHarvestMask_250m,
-    file.path(out_dir, "LegalHarvestMask_250m.tif"),
-    overwrite = TRUE,
-    datatype = "INT1U"
-  )
-  
-  message("💾 Output rasters written to: ", out_dir)
-  
-  return(invisible(sim))
-}
+
 ## Build provincial boundaries for the study area.
 ##
 ## This function exists to provide a clean, explicit
@@ -262,54 +100,6 @@ buildPlanningGrid <- function(sim) {
 ## but allow other modules (e.g., hydrology, landbase policy)
 ## to apply province-specific rules in a transparent way.
 
-buildProvinces <- function(sim) {
-  
-  message("🔵 Building Provinces layer...")
-  
-  ## 1) Provincial boundaries
-  prov <- rnaturalearth::ne_states(
-    country = "Canada",
-    returnclass = "sf"
-  )
-  
-  ## 2) Only eastern provinces
-  prov <- prov[prov$name_en %in% c(
-    "Ontario",
-    "Quebec",
-    "New Brunswick",
-    "Nova Scotia",
-    "Prince Edward Island",
-    "Newfoundland and Labrador"
-  ), ]
-  
-  ## 3) Province codes (jurisdiction)
-  ## Explicit short codes for downstream policy joins
-  prov$jurisdiction <- c("ON", "QC", "NB", "NS", "PE", "NL")
-  
-  ## 4) Reproject to study area CRS
-  prov <- sf::st_transform(prov, sf::st_crs(sim$studyArea))
-  
-  ## 5) Clip to study area
-  prov <- sf::st_intersection(prov, sim$studyArea)
-  
-  ## 6) Keep only required attribute(s) BEFORE conversion
-  prov <- prov[, "jurisdiction", drop = FALSE]
-  
-  ## 7) Convert to SpatVector (SpaDES standard)
-  sim$Provinces <- terra::vect(prov)
-  
-  # Provinces are a data source;
-  # jurisdiction is the abstract policy interface exposed downstream
-  sim$jurisdiction <- sim$Provinces
-  
-  ## 8) Message (FIXED)
-  message(
-    "✔ Provinces ready: ",
-    paste(unique(sim$Provinces$jurisdiction), collapse = ", ")
-  )
-  
-  return(invisible(sim))
-}
 
 ###########################
 ## NOTE:
@@ -320,7 +110,66 @@ buildProvinces <- function(sim) {
 ## jurisdiction-aware processing in downstream modules
 ## (e.g., province-based riparian policies in EasternCanadaHydrology).
 ## This module does not apply or interpret those policies.
-
+buildPlanningGrid <- function(sim) {
+  
+  message("🔵 Building PlanningGrid and aligning layers...")
+  
+  study_v <- terra::vect(sim$studyArea)
+  
+  planning <- terra::rast(
+    study_v,
+    resolution = 250,
+    crs = terra::crs(study_v)
+  )
+  
+  values(planning) <- NA
+  sim$PlanningGrid_250m <- planning
+  
+  ## Align LandCover
+  lc_aligned <- terra::project(sim$LandCover, planning, method = "near")
+  lc_aligned <- terra::resample(lc_aligned, planning, method = "near")
+  sim$LandCover_250m <- lc_aligned
+  
+  ## Align standAge
+  sa_aligned <- terra::project(sim$standAgeMap, planning, method = "near")
+  sa_aligned <- terra::resample(sa_aligned, planning, method = "near")
+  sim$standAge_250m <- sa_aligned
+  
+  ## Rasterize FMU
+  if (!"FMU_ID" %in% names(sim$FMU)) {
+    sim$FMU$FMU_ID <- seq_len(nrow(sim$FMU))
+  }
+  
+  fmu_r <- terra::rasterize(
+    sim$FMU,
+    planning,
+    field = "FMU_ID",
+    touches = FALSE
+  )
+  
+  ## Rasterize CPCAD
+  prot_r <- terra::rasterize(
+    sim$CPCAD,
+    planning,
+    field = 1,
+    background = 0
+  )
+  
+  ## Legal mask
+  LegalHarvestMask_250m <- terra::ifel(
+    !is.na(fmu_r) & prot_r == 0,
+    1,
+    0
+  )
+  
+  sim$LegalConstraints <- list(
+    FMU_Raster_250m = fmu_r,
+    CPCAD_Raster_250m = prot_r,
+    LegalHarvestMask_250m = LegalHarvestMask_250m
+  )
+  
+  return(invisible(sim))
+}
 .inputObjects <- function(sim) {
   
   dPath <- asPath(getOption("reproducible.destinationPath", dataPath(sim)), 1)
@@ -444,114 +293,72 @@ buildProvinces <- function(sim) {
     #sim$rstLCC <- lcc
   ## ---- LandCover (SCANFI) ----
   ## ---------------------------------------------------------
-  ## 3b) LandCover – SCANFI LCC
+  ## LandCover
   ## ---------------------------------------------------------
   
-  ## ---------------------------------------------------------
-  ## 3b) LandCover – supplied externally only
-  ## ---------------------------------------------------------
-  
-  if (SpaDES.core::suppliedElsewhere("LandCover")) {
+  if (!is.null(sim$LandCover)) {
     
-    message("✔ Using LandCover supplied externally.")
+    message("✔ Using LandCover supplied externally (user or upstream module).")
     lc <- sim$LandCover
     
   } else {
     
-    stop("LandCover must be supplied via simInit() or an upstream module.")
+    message("LandCover not supplied. Building using prepInputs_SCANFI_LCC_FAO...")
     
+    lc <- prepInputs_SCANFI_LCC_FAO(
+      studyArea = sim$studyArea,
+      destinationPath = dPath
+    )
+    
+    if (is.null(lc)) {
+      stop("LandCover was not supplied and could not be built internally.")
+    }
+    
+    sim$LandCover <- lc
   }
-  
-  ## ---- Harmonize CRS & extent ----
-  
-  ## ---- Harmonize CRS & extent ----
-  
-  if (!terra::same.crs(lc, studyArea_v)) {
+  ## Harmonize LandCover
+  if (!terra::same.crs(sim$LandCover, studyArea_v)) {
     message("Reprojecting LandCover to studyArea CRS...")
-    lc <- terra::project(lc, studyArea_v)
+    sim$LandCover <- terra::project(sim$LandCover, studyArea_v, method = "near")
   }
   
   message("Cropping LandCover to studyArea...")
-  lc <- terra::crop(lc, studyArea_v)
+  sim$LandCover <- terra::crop(sim$LandCover, studyArea_v)
+
+  ## ---------------------------------------------------------
+  ## standAgeMap
+  ## ---------------------------------------------------------
   
-  ## ---------------------------------------------------------
-  ## 4) Hydrology – HydroRIVERS + HydroLAKES
-  ## Raw hydrology inputs only (no buffering, no policy)
-  ## ---------------------------------------------------------
-  ## ---------------------------------------------------------
-  ## 4) Hydrology – HydroRIVERS + HydroLAKES + HydroBASINS
-  ## Raw hydrology inputs only (no buffering, no policy)
-  ## ---------------------------------------------------------
- 
-    message("▶ Preparing Hydrology from HydroRIVERS, HydroLAKES, and HydroBASINS...")
+  if (!is.null(sim$standAgeMap)) {
     
-    hydro_dir <- file.path(dPath, "Hydrology")
-    #dir.create(hydro_dir, recursive = TRUE, showWarnings = FALSE)
+    message("✔ Using standAgeMap supplied externally (user or upstream module).")
+    sa <- sim$standAgeMap
     
-    ## ---- Streams (HydroRIVERS) ---
-    streams <- Cache(
-      prepInputs,
-      url = "https://data.hydrosheds.org/file/HydroRIVERS/HydroRIVERS_v10_na_shp.zip",
-      destinationPath = file.path(dPath, "Hydrology"),#hydro_dir,
-      archive = "HydroRIVERS_v10_na_shp.zip",
-      targetFile = "HydroRIVERS_v10_na_shp/HydroRIVERS_v10_na.shp",
-      fun = terra::vect,
-      cropTo = studyArea_sf,
-      projectTo = studyArea_sf
+  } else {
+    
+    message("standAgeMap not supplied. Building using prepInputsStandAgeMap...")
+    
+    sa <- prepInputsStandAgeMap(
+      rasterToMatch = sim$LandCover,
+      studyArea = sim$studyArea,
+      destinationPath = dPath,
+      dataYear = 2001
     )
     
-    ## ---- Lakes (HydroLAKES) ----
-    lakes <- Cache(
-      prepInputs,
-      url = "https://data.hydrosheds.org/file/hydrolakes/HydroLAKES_polys_v10_shp.zip",
-      destinationPath = file.path(dPath, "Hydrology"),#hydro_dir,
-      archive = "HydroLAKES_polys_v10_shp.zip",
-      targetFile = "HydroLAKES_polys_v10_shp/HydroLAKES_polys_v10.shp",
-      fun = terra::vect,
-      cropTo = studyArea_sf,
-      projectTo = studyArea_sf
-    )
+    if (is.null(sa)) {
+      stop("standAgeMap was not supplied and could not be built internally.")
+    }
     
-    ## ---- Basins (HydroBASINS – Level 8, North America) ----
-    basins <- Cache(
-      prepInputs,
-      url = "https://data.hydrosheds.org/file/HydroBASINS/standard/hybas_na_lev08_v1c.zip",
-      destinationPath = file.path(dPath, "Hydrology"),#hydro_dir,
-      archive = "hybas_na_lev08_v1c.zip",
-      targetFile = "hybas_na_lev08_v1c/hybas_na_lev08_v1c.shp",
-      fun = terra::vect,
-      cropTo = studyArea_sf,
-      projectTo = studyArea_sf
-    )
-    
-    ## ---- Assemble hydrology object (internal structure) ----
-    ## Internal grouping only — downstream modules use exposed objects
-    
-    sim$Hydrology <- list(
-      source  = c(
-        "HydroRIVERS_v10_na",
-        "HydroLAKES_v10",
-        "HydroBASINS_v1c_lev08"
-      ),
-      streams = streams,
-      lakes   = lakes,
-      basins  = basins
-    )
-    
-    ## ---- Expose components for downstream modules (interface) ---
-    ## Required by RiparianBuffers
-    sim$Hydrology_streams <- streams
-    sim$Hydrology_lakes   <- lakes
-    sim$Hydrology_basins  <- basins
-    
-    message(
-      "✔ Hydrology ready (raw geometry): ",
-      nrow(streams), " stream features, ",
-      nrow(lakes), " lake features, ",
-      nrow(basins), " basin polygons."
-    )
+    sim$standAgeMap <- sa
+  }
+  ## Harmonize standAgeMap
+  if (!terra::same.crs(sim$standAgeMap, studyArea_v)) {
+    message("Reprojecting standAgeMap to studyArea CRS...")
+    sim$standAgeMap <- terra::project(sim$standAgeMap, studyArea_v, method = "near")
+  }
   
-  
+  message("Cropping standAgeMap to studyArea...")
+  sim$standAgeMap <- terra::crop(sim$standAgeMap, studyArea_v)
   return(invisible(sim))
 
   }

@@ -50,7 +50,11 @@ getModule(
   modulePath = getPaths()$modulePath,
   overwrite  = FALSE
 )
-
+## 3) LOAD LandCover (MANDATORY in method 2)
+## =========================================================
+lc <- terra::rast(
+  "E:/MODULES_TESTS/SCANFI_att_nfiLandCover_CanadaLCCclassCodes_S_2010_v1_1.tif"
+)
 ## =========================================================
 ## 5) INITIALIZE SIMULATION
 ## =========================================================
@@ -60,12 +64,12 @@ sim <- simInit(
     "EasternCanadaDataPrep",
     "RiparianBuffers"
   ),
-  objects = list(
+  objects = list( LandCover = lc,
     studyArea = studyArea
   ),
   params = list(
     RiparianBuffers = list(
-      hydroRaster_m = 30
+      hydroRaster_m = 25
       # riparian policy از خود ماژول میاد
     )
   )

@@ -8,17 +8,15 @@ EasternCanadaInit <- function(sim) {
   stopifnot(
     !is.null(sim$studyArea),
     !is.null(sim$FMU),
-    !is.null(sim$CPCAD)
+    !is.null(sim$CPCAD),
+    !is.null(sim$LandCover),
+    !is.null(sim$standAgeMap)
   )
   
   ## ---------------------------------------------------------
-  ## 1) Jurisdictional layer (lightweight, vector)
+  ## Build Planning Grid & align layers
   ## ---------------------------------------------------------
-  sim <- buildProvinces(sim)
+  sim <- buildPlanningGrid(sim)
   
-  ## ---------------------------------------------------------
-  ## 2) Planning grid & landbase (heavy raster work)
-  ## ---------------------------------------------------------
-  sim <- buildPlanningGrid(sim)  
   invisible(sim)
 }

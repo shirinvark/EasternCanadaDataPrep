@@ -41,9 +41,7 @@ lc <- terra::rast(
 sim <- simInit(
   times   = list(start = 1, end = 1),
   modules = "EasternCanadaDataPrep",
-  objects = list(
-    LandCover = lc
-  )
+  
 )
 
 sim <- spades(sim)
