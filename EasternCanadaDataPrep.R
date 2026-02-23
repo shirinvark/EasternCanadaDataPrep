@@ -278,79 +278,67 @@ buildPlanningGrid <- function(sim) {
     sim$FMU <- terra::project(sim$FMU, studyArea_v)
   }
   
-  ##LCC
-  ## LCC — upstream only
-  #if (SpaDES.core::suppliedElsewhere("rstLCC")) {
-    
-    
-    #lcc <- sim$rstLCC
-    
-    #if (!terra::same.crs(lcc, studyArea_v)) {
-     # lcc <- terra::project(lcc, studyArea_v)
-   # }
-    
-    #lcc <- terra::crop(lcc, studyArea_v)
-    
-    #sim$rstLCC <- lcc
-  ## ---- LandCover (SCANFI) ----
+  
   ## ---------------------------------------------------------
   ## LandCover
   ## ---------------------------------------------------------
   
+  ## ---------------------------------------------------------
+  ## ---------------------------------------------------------
+  ## LandCover (SCANFI – Standalone)
+  ## ---------------------------------------------------------
+  
   if (!is.null(sim$LandCover)) {
     
-    message("✔ Using LandCover supplied externally (user or upstream module).")
-    lc <- sim$LandCover
+    message("✔ Using LandCover supplied externally by user.")
     
   } else {
     
-    message("LandCover not supplied. Building using prepInputs_SCANFI_LCC_FAO...")
+    message("Building LandCover using LandR::prepInputs_SCANFI_LCC_FAO...")
     
-    lc <- prepInputs_SCANFI_LCC_FAO(
+    sim$LandCover <- Cache(
+      LandR::prepInputs_SCANFI_LCC_FAO,
       studyArea = sim$studyArea,
-      destinationPath = dPath
+      dataYear = 2005,
+      destinationPath = dPath,
+      useCache = FALSE
     )
     
-    if (is.null(lc)) {
-      stop("LandCover was not supplied and could not be built internally.")
+    if (is.null(sim$LandCover)) {
+      stop("LandCover could not be created.")
     }
-    
-    sim$LandCover <- lc
   }
-  ## Harmonize LandCover
-  if (!terra::same.crs(sim$LandCover, studyArea_v)) {
-    message("Reprojecting LandCover to studyArea CRS...")
-    sim$LandCover <- terra::project(sim$LandCover, studyArea_v, method = "near")
-  }
-  
-  message("Cropping LandCover to studyArea...")
-  sim$LandCover <- terra::crop(sim$LandCover, studyArea_v)
 
   ## ---------------------------------------------------------
   ## standAgeMap
   ## ---------------------------------------------------------
   
+  ## ---------------------------------------------------------
+  ## standAgeMap (NFI via LandR)
+  ## ---------------------------------------------------------
+  
   if (!is.null(sim$standAgeMap)) {
     
-    message("✔ Using standAgeMap supplied externally (user or upstream module).")
-    sa <- sim$standAgeMap
+    message("✔ Using standAgeMap supplied externally.")
     
   } else {
     
-    message("standAgeMap not supplied. Building using prepInputsStandAgeMap...")
+    message("Building standAgeMap using LandR::prepInputsStandAgeMap...")
     
-    sa <- prepInputsStandAgeMap(
-      rasterToMatch = sim$LandCover,
-      studyArea = sim$studyArea,
+    sim$standAgeMap <- Cache(
+      LandR::prepInputsStandAgeMap,
+      dataSource = "NFI",
+      dataYear = 2001,
+      ageFun = terra::rast,
       destinationPath = dPath,
-      dataYear = 2001
+      rasterToMatch = sim$LandCover,
+      overwrite = TRUE,
+      useCache = FALSE,
+      startTime = 2001
     )
     
-    if (is.null(sa)) {
-      stop("standAgeMap was not supplied and could not be built internally.")
-    }
-    
-    sim$standAgeMap <- sa
+    LandR::assertStandAgeMapAttr(sim$standAgeMap)
+    sim$imputedPixID <- attr(sim$standAgeMap, "imputedPixID")
   }
   ## Harmonize standAgeMap
   if (!terra::same.crs(sim$standAgeMap, studyArea_v)) {
