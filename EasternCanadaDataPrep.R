@@ -146,31 +146,16 @@ buildPlanningGrid <- function(sim) {
   )
   
   ## Step 3: aggregate from 30m to 250m (much faster than full project)
-  res_lc <- terra::res(lc_window)[1]
-  fact <- as.integer(round(250 / res_lc))
+  message("👉 Starting LandCover resample (FAST)")
   
-  if (abs(res_lc * fact - 250) > 1) {
-    stop("LandCover resolution not compatible with 250m aggregation.")
-  }  
-  message("👉 Starting LandCover aggregate")
-  
-  lc_agg <- terra::aggregate(
+  sim$LandCover_250m <- terra::resample(
     lc_window,
-    fact = fact,
-    fun = modal,
-    na.rm = TRUE,
-    filename = file.path(tempdir(), "lc_agg_250m.tif"),
-    overwrite = TRUE
+    planning,
+    method = "near"
   )
-  message("👉 Finished LandCover aggregate")
-  ## Step 4: align exactly to planning grid
-  if (!terra::compareGeom(lc_agg, planning, stopOnError = FALSE)) {
-    sim$LandCover_250m <- terra::resample(lc_agg, planning, method = "near")
-  } else {
-    sim$LandCover_250m <- lc_agg
-  }
   
-  ## Align standAge (only if exists)
+  message("👉 Finished LandCover resample")
+  
   ## ---------------------------------------------------------
   ## Align standAge (FAST – crop first, no double warp)
   ## ---------------------------------------------------------
@@ -209,7 +194,7 @@ buildPlanningGrid <- function(sim) {
     
     # 4️⃣ فقط resample نهایی
     sim$standAge_250m <- terra::resample(sa_window, planning, method = "near")
-    message("👉 Finishing standAge alignment")
+    message("👉 Finishined standAge alignment")
   }
   ## Rasterize FMU
   if (!"FMU_ID" %in% names(sim$FMU)) {
