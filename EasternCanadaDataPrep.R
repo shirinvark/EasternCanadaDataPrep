@@ -330,6 +330,7 @@ buildPlanningGrid <- function(sim) {
   ## LandCover (Upstream → Local → Download)
   ## ---------------------------------------------------------
   
+  ## ---- LandCover block ----
   if (SpaDES.core::suppliedElsewhere("LandCover")) {
     
     message("✔ Using LandCover supplied from upstream module.")
@@ -342,65 +343,99 @@ buildPlanningGrid <- function(sim) {
     dir.create(lc_dir, showWarnings = FALSE, recursive = TRUE)
     
     if (!file.exists(lc_file)) {
-      
-      message("LandCover not found locally. Downloading from Google Drive...")
-      
       Cache(
         prepInputs,
         url = "https://drive.google.com/uc?export=download&id=1Gzhd5VnIZ7MqRSRJmNFiGfVUHrKkP9Ag",
         destinationPath = lc_dir,
         targetFile = "LandCover_SCANFI_2020.tif",
         fun = terra::rast,
-        overwrite = FALSE,
-        useCache = TRUE
+        overwrite = FALSE
       )
-      
-    } else {
-      message("✔ LandCover found locally. Skipping download.")
     }
     
     sim$LandCover <- terra::rast(lc_file)
-    ## ---------------------------------------------------------
-    ## standAgeMap (Upstream → Local → Download → Fast Crop)
-    ## ---------------------------------------------------------
+  }
+  
+  ## ---- standAge block (کاملاً جدا) ----
+  ## =========================================================
+  ## StandAgeMap (Upstream → Local → Safe Crop → Safe Project)
+  ## =========================================================
+  
+  if (SpaDES.core::suppliedElsewhere("standAgeMap")) {
     
-    if (SpaDES.core::suppliedElsewhere("standAgeMap")) {
+    message("✔ Using standAgeMap supplied from upstream module.")
+    
+  } else {
+    
+    sa_dir  <- file.path(dPath, "StandAge")
+    sa_file <- file.path(sa_dir, "SCANFI_att_age_S_2020_v1_1.tif")
+    
+    dir.create(sa_dir, showWarnings = FALSE, recursive = TRUE)
+    
+    if (!file.exists(sa_file)) {
+      stop("❌ standAge file not found locally: ", sa_file)
+    }
+    
+    sim$standAgeMap <- terra::rast(sa_file)
+  }
+  
+  ## ---------------------------------------------------------
+  ## Spatial alignment (SAFE + FAST)
+  ## ---------------------------------------------------------
+  
+  if (!is.null(sim$standAgeMap)) {
+    
+    if (!terra::same.crs(sim$standAgeMap, studyArea_v)) {
       
-      message("✔ Using standAgeMap supplied from upstream module.")
+      message("🔄 Reprojecting standAgeMap (performance-safe pipeline)...")
       
-    } else {
+      sa_area_native <- terra::project(
+        studyArea_v,
+        terra::crs(sim$standAgeMap)
+      )
       
-      sa_dir  <- file.path(dPath, "StandAge")
-      sa_file <- file.path(sa_dir, "SCANFI_att_age_S_2020_v1_1.tif")
-      
-      dir.create(sa_dir, showWarnings = FALSE, recursive = TRUE)
-      
-      ## اگر فایل قبلاً دانلود شده → دوباره دانلود نکن
-      if (!file.exists(sa_file)) {
+      if (terra::relate(
+        terra::ext(sim$standAgeMap),
+        terra::ext(sa_area_native),
+        "intersects")) {
         
-        message("standAgeMap not found locally. Downloading from Google Drive...")
-        
-        Cache(
-          prepInputs,
-          url = "https://drive.google.com/uc?export=download&id=1OdZ7Tznk53KceEyt9dFOBOkxDHEX5X0U",
-          destinationPath = sa_dir,
-          targetFile = "SCANFI_att_age_S_2020_v1_1.tif",
-          fun = terra::rast,
-          overwrite = FALSE,
-          useCache = TRUE
+        sim$standAgeMap <- terra::crop(
+          sim$standAgeMap,
+          sa_area_native,
+          snap = "out"
         )
         
       } else {
-        message("✔ standAgeMap found locally. Skipping download.")
+        stop("❌ standAgeMap does not overlap studyArea (native CRS).")
       }
       
-      ## فقط rast کن — هیچ LandR pipeline اجرا نشه
-      sim$standAgeMap <- terra::rast(sa_file)
+      sim$standAgeMap <- terra::project(
+        sim$standAgeMap,
+        studyArea_v,
+        method = "near"
+      )
+      
+    } else {
+      
+      ## CRS already same → just crop
+      if (terra::relate(
+        terra::ext(sim$standAgeMap),
+        terra::ext(studyArea_v),
+        "intersects")) {
+        
+        sim$standAgeMap <- terra::crop(
+          sim$standAgeMap,
+          studyArea_v,
+          snap = "out"
+        )
+        
+      } else {
+        stop("❌ standAgeMap does not overlap studyArea.")
+      }
       
     }
     
-    ## فقط یک crop سریع
-    sim$standAgeMap <- terra::crop(sim$standAgeMap, studyArea_v)
+    message("✔ standAgeMap ready.")
   }
   return(invisible(sim))
 
