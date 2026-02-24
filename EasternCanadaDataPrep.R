@@ -371,6 +371,7 @@ buildPlanningGrid <- function(sim) {
       ageFun = terra::rast,
       destinationPath = dPath,
       rasterToMatch = sim$LandCover,
+      maskWithRTM = FALSE,   # 👈 اینجا بذار
       overwrite = TRUE,
       useCache = FALSE
     )
