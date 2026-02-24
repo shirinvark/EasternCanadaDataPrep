@@ -142,14 +142,28 @@ buildPlanningGrid <- function(sim) {
   )
   
   res_lc <- terra::res(lc_src)[1]
-  fact <- round(250 / res_lc)
-  if (fact < 1) fact <- 1  
-  sim$LandCover_250m <- terra::aggregate(
-    lc_src,
-    fact = fact,
-    fun = modal,
-    na.rm = TRUE
-  )
+  
+  if (res_lc < 250) {
+    
+    fact <- round(250 / res_lc)
+    if (fact < 1) fact <- 1
+    
+    sim$LandCover_250m <- terra::aggregate(
+      lc_src,
+      fact = fact,
+      fun = modal,
+      na.rm = TRUE
+    )
+    
+  } else {
+    
+    sim$LandCover_250m <- terra::resample(
+      lc_src,
+      planning,
+      method = "near"
+    )
+    
+  }
   ## ---------------------------------------------------------
   ## Align standAge (FAST – crop first, no double warp)
   ## ---------------------------------------------------------
