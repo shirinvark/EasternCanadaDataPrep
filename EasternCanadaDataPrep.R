@@ -323,35 +323,42 @@ buildPlanningGrid <- function(sim) {
   ## LandCover (Upstream OR Download)
   ## ---------------------------------------------------------
   
+  ## ---------------------------------------------------------
+  ## LandCover (Upstream → Local → Download)
+  ## ---------------------------------------------------------
+  
   if (SpaDES.core::suppliedElsewhere("LandCover")) {
     
     message("✔ Using LandCover supplied from upstream module.")
     
   } else {
     
-    message("LandCover not supplied. Downloading from Google Drive...")
+    lc_dir  <- file.path(dPath, "LandCover")
+    lc_file <- file.path(lc_dir, "LandCover_SCANFI_2020.tif")
     
-    sim$LandCover <- Cache(
-      prepInputs,
-      
-      url = "https://drive.google.com/uc?export=download&id=1Gzhd5VnIZ7MqRSRJmNFiGfVUHrKkP9Ag",
-      
-      destinationPath = file.path(dPath, "LandCover"),
-      
-      targetFile = "LandCover_SCANFI_2020.tif",  # 👈 اسم دقیق فایل داخل Drive
-      
-      fun = terra::rast,
-      
-      overwrite = FALSE,
-      
-      userTags = c("LandCover", "Drive")
-    )
+    dir.create(lc_dir, showWarnings = FALSE, recursive = TRUE)
     
-    if (is.null(sim$LandCover)) {
-      stop("LandCover could not be loaded.")
+    if (!file.exists(lc_file)) {
+      
+      message("LandCover not found locally. Downloading from Google Drive...")
+      
+      Cache(
+        prepInputs,
+        url = "https://drive.google.com/uc?export=download&id=1Gzhd5VnIZ7MqRSRJmNFiGfVUHrKkP9Ag",
+        destinationPath = lc_dir,
+        targetFile = "LandCover_SCANFI_2020.tif",
+        fun = terra::rast,
+        overwrite = FALSE,
+        useCache = TRUE
+      )
+      
+    } else {
+      message("✔ LandCover found locally. Skipping download.")
     }
+    
+    sim$LandCover <- terra::rast(lc_file)
+    
   }
-  
   ## ---------------------------------------------------------
   ## standAgeMap (NFI via LandR)
   ## ---------------------------------------------------------
