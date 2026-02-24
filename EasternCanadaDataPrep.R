@@ -148,13 +148,19 @@ buildPlanningGrid <- function(sim) {
   ## Step 3: aggregate from 30m to 250m (much faster than full project)
   message("👉 Starting LandCover resample (FAST)")
   
-  sim$LandCover_250m <- terra::resample(
+  res_lc <- terra::res(lc_window)[1]
+  fact <- as.integer(round(250 / res_lc))
+  
+  message("👉 Starting LandCover aggregate (FAST)")
+  
+  sim$LandCover_250m <- terra::aggregate(
     lc_window,
-    planning,
-    method = "near"
+    fact = fact,
+    fun = modal,
+    na.rm = TRUE
   )
   
-  message("👉 Finished LandCover resample")
+  message("👉 Finished LandCover aggregate")
   
   ## ---------------------------------------------------------
   ## Align standAge (FAST – crop first, no double warp)
@@ -186,14 +192,12 @@ buildPlanningGrid <- function(sim) {
         sa_window,
         fact = fact,
         fun = modal,
-        na.rm = TRUE,
-        filename = file.path(tempdir(), "sa_agg_250m.tif"),
-        overwrite = TRUE
+        na.rm = TRUE
       )
     }
     
     # 4️⃣ فقط resample نهایی
-    sim$standAge_250m <- terra::resample(sa_window, planning, method = "near")
+    sim$standAge_250m <- sa_window    
     message("👉 Finishined standAge alignment")
   }
   ## Rasterize FMU
