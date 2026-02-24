@@ -118,18 +118,55 @@ buildPlanningGrid <- function(sim) {
   study_v <- terra::vect(sim$studyArea)
   
   planning <- terra::rast(
-    study_v,
+    extent = terra::ext(study_v),
     resolution = 250,
     crs = terra::crs(study_v)
   )
+  
+  terra::origin(planning) <- c(0, 0)
   
   values(planning) <- NA
   sim$PlanningGrid_250m <- planning
   
   ## Align LandCover
-  lc_aligned <- terra::project(sim$LandCover, planning, method = "near")
-  lc_aligned <- terra::resample(lc_aligned, planning, method = "near")
-  sim$LandCover_250m <- lc_aligned
+  ## Fast window crop before projection
+  ## Step 1: window crop (fast)
+  lc_src <- sim$LandCover
+  
+  ## 1) Reproject first (if needed)
+  if (!terra::same.crs(lc_src, planning)) {
+    lc_src <- terra::project(lc_src, terra::crs(planning), method = "near")
+  }
+  
+  ## 2) Then window crop (faster on aligned grid)
+  lc_window <- terra::crop(
+    lc_src,
+    terra::ext(planning),
+    snap = "out"
+  )
+  
+  ## Step 3: aggregate from 30m to 250m (much faster than full project)
+  res_lc <- terra::res(lc_window)[1]
+  fact <- as.integer(round(250 / res_lc))
+  
+  if (abs(res_lc * fact - 250) > 1) {
+    stop("LandCover resolution not compatible with 250m aggregation.")
+  }  
+  lc_agg <- terra::aggregate(
+    lc_window,
+    fact = fact,
+    fun = modal,
+    na.rm = TRUE,
+    filename = file.path(tempdir(), "lc_agg_250m.tif"),
+    overwrite = TRUE
+  )
+  
+  ## Step 4: align exactly to planning grid
+  if (!terra::compareGeom(lc_agg, planning, stopOnError = FALSE)) {
+    sim$LandCover_250m <- terra::resample(lc_agg, planning, method = "near")
+  } else {
+    sim$LandCover_250m <- lc_agg
+  }
   
   ## Align standAge
   sa_aligned <- terra::project(sim$standAgeMap, planning, method = "near")
@@ -304,9 +341,6 @@ buildPlanningGrid <- function(sim) {
       targetFile = "LandCover_SCANFI_2020.tif",  # 👈 اسم دقیق فایل داخل Drive
       
       fun = terra::rast,
-      
-      cropTo    = sim$studyArea,
-      projectTo = sim$studyArea,
       
       overwrite = FALSE,
       
