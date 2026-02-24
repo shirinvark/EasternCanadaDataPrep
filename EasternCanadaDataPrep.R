@@ -158,12 +158,7 @@ buildPlanningGrid <- function(sim) {
     sa_src <- sim$standAgeMap
     
     
-    # فقط crop (بدون filename)
-    sa_window <- terra::crop(
-      sa_src,
-      terra::ext(planning),
-      snap = "out"
-    )
+   
     
     # اگر رزولوشن کمتر از 250m بود aggregate کن
     res_sa <- terra::res(sa_window)[1]
