@@ -123,8 +123,7 @@ buildPlanningGrid <- function(sim) {
     crs = terra::crs(study_v)
   )
   
-  terra::origin(planning) <- c(0, 0)
-  
+
   values(planning) <- NA
   sim$PlanningGrid_250m <- planning
   
@@ -133,72 +132,60 @@ buildPlanningGrid <- function(sim) {
   ## Step 1: window crop (fast)
   lc_src <- sim$LandCover
   
-  ## 1) Reproject first (if needed)
+  # اگر CRS فرق داشت
   if (!terra::same.crs(lc_src, planning)) {
     lc_src <- terra::project(lc_src, terra::crs(planning), method = "near")
   }
   
-  ## 2) Then window crop (faster on aligned grid)
-  lc_window <- terra::crop(
-    lc_src,
-    terra::ext(planning),
-    snap = "out"
-  )
-  
-  ## Step 3: aggregate from 30m to 250m (much faster than full project)
-  message("👉 Starting LandCover resample (FAST)")
-  
-  res_lc <- terra::res(lc_window)[1]
+  # فقط aggregate
+  res_lc <- terra::res(lc_src)[1]
   fact <- as.integer(round(250 / res_lc))
   
-  message("👉 Starting LandCover aggregate (FAST)")
-  
   sim$LandCover_250m <- terra::aggregate(
-    lc_window,
+    lc_src,
     fact = fact,
     fun = modal,
     na.rm = TRUE
   )
-  
-  message("👉 Finished LandCover aggregate")
-  
   ## ---------------------------------------------------------
   ## Align standAge (FAST – crop first, no double warp)
   ## ---------------------------------------------------------
   
   if (!is.null(sim$standAgeMap)) {
-    message("👉 Starting standAge alignment")
     
-    message("🔄 Aligning standAge to PlanningGrid (fast)...")
+    message("👉 Starting standAge alignment")
     
     sa_src <- sim$standAgeMap
     
-    # 1️⃣ اگر CRS فرق دارد → فقط یکبار project کن
+    # اگر CRS فرق داشت فقط یک بار project کن
     if (!terra::same.crs(sa_src, planning)) {
       sa_src <- terra::project(sa_src, terra::crs(planning), method = "near")
     }
     
-    # 2️⃣ crop به extent planning (خیلی سریع‌تر)
-    sa_window <- terra::crop(sa_src, terra::ext(planning), snap = "out")
+    # فقط crop (بدون filename)
+    sa_window <- terra::crop(
+      sa_src,
+      terra::ext(planning),
+      snap = "out"
+    )
     
-    # 3️⃣ اگر رزولوشن کمتر از 250m است → aggregate کن
+    # اگر رزولوشن کمتر از 250m بود aggregate کن
     res_sa <- terra::res(sa_window)[1]
     
     if (res_sa < 250) {
-      
       fact <- as.integer(round(250 / res_sa))
       
       sa_window <- terra::aggregate(
         sa_window,
         fact = fact,
-        fun = modal,
+        fun = mean,
         na.rm = TRUE
       )
     }
     
-    # 4️⃣ فقط resample نهایی
-    sim$standAge_250m <- sa_window    
-    message("👉 Finishined standAge alignment")
+    sim$standAge_250m <- sa_window
+    
+    message("👉 Finished standAge alignment")
   }
   ## Rasterize FMU
   if (!"FMU_ID" %in% names(sim$FMU)) {
@@ -344,13 +331,6 @@ buildPlanningGrid <- function(sim) {
   
   
   ## ---------------------------------------------------------
-  ## LandCover
-  ## ---------------------------------------------------------
-  ## ---------------------------------------------------------
-  ## LandCover (Upstream OR Download)
-  ## ---------------------------------------------------------
-  
-  ## ---------------------------------------------------------
   ## LandCover (Upstream → Local → Download)
   ## ---------------------------------------------------------
   
@@ -377,14 +357,14 @@ buildPlanningGrid <- function(sim) {
       )
     }
     
-    sim$LandCover <- terra::rast(lc_file)
-  }
-  
-  ## ---- standAge block (کاملاً جدا) ----
-  ## =========================================================
-  ## StandAgeMap (Upstream → Local → Safe Crop → Safe Project)
-  ## =========================================================
-  
+    lc_full <- terra::rast(lc_file)
+    
+    sim$LandCover <- terra::crop(
+      lc_full,
+      studyArea_v,
+      snap = "out"
+    )  }
+
   ## =========================================================
   ## StandAgeMap (Upstream → Local → Download → FAST Align)
   ## =========================================================
