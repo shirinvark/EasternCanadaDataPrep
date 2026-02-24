@@ -366,14 +366,13 @@ buildPlanningGrid <- function(sim) {
     
     sim$standAgeMap <- Cache(
       LandR::prepInputsStandAgeMap,
-      dataSource = "NFI",
-      dataYear = 2001,
+      dataSource = "SCANFI",
+      dataYear = 2020,
       ageFun = terra::rast,
       destinationPath = dPath,
       rasterToMatch = sim$LandCover,
       overwrite = TRUE,
-      useCache = FALSE,
-      startTime = 2001
+      useCache = FALSE
     )
     
     LandR::assertStandAgeMapAttr(sim$standAgeMap)
