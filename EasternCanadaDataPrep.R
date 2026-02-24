@@ -131,13 +131,16 @@ buildPlanningGrid <- function(sim) {
   ## Fast window crop before projection
   ## Step 1: window crop (fast)
   lc_src <- sim$LandCover
-  
-  # اگر CRS فرق داشت
   if (!terra::same.crs(lc_src, planning)) {
     lc_src <- terra::project(lc_src, terra::crs(planning), method = "near")
   }
   
-  # فقط aggregate
+  lc_src <- terra::crop(
+    lc_src,   # ✅ درست
+    terra::ext(planning),
+    snap = "out"
+  )
+  
   res_lc <- terra::res(lc_src)[1]
   fact <- as.integer(round(250 / res_lc))
   
@@ -152,21 +155,25 @@ buildPlanningGrid <- function(sim) {
   ## ---------------------------------------------------------
   
   if (!is.null(sim$standAgeMap)) {
+    sa_src <- terra::crop(
+      sim$standAgeMap,
+      terra::ext(planning),
+      snap = "out"
+    )
     
-    res_sa <- terra::res(sim$standAgeMap)[1]
+    res_sa <- terra::res(sa_src)[1]
     
     if (res_sa < 250) {
       fact <- as.integer(round(250 / res_sa))
       
       sim$standAge_250m <- terra::aggregate(
-        sim$standAgeMap,
+        sa_src,
         fact = fact,
         fun = mean,
         na.rm = TRUE
       )
-      
     } else {
-      sim$standAge_250m <- sim$standAgeMap
+      sim$standAge_250m <- sa_src
     }
     
   }
