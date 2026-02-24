@@ -288,6 +288,10 @@ buildPlanningGrid <- function(sim) {
   ## LandCover (SCANFI – Standalone)
   ## ---------------------------------------------------------
   
+  ## ---------------------------------------------------------
+  ## LandCover (SCANFI FAO)
+  ## ---------------------------------------------------------
+
   if (!is.null(sim$LandCover)) {
     
     message("✔ Using LandCover supplied externally by user.")
@@ -298,10 +302,20 @@ buildPlanningGrid <- function(sim) {
     
     sim$LandCover <- Cache(
       LandR::prepInputs_SCANFI_LCC_FAO,
-      studyArea = sim$studyArea,
-      dataYear = 2005,
+      
+      year = P(sim)$dataYear,  
+      
+      maskTo    = sim$studyArea,
+      cropTo    = sim$rasterToMatch,
+      projectTo = sim$rasterToMatch,
+      
+      disturbedCode = 240,
       destinationPath = dPath,
-      useCache = FALSE
+      
+      overwrite = FALSE,
+      useCache  = TRUE,
+      
+      userTags = c("LandCover", "SCANFI", "FAO")
     )
     
     if (is.null(sim$LandCover)) {
