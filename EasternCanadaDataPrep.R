@@ -157,10 +157,6 @@ buildPlanningGrid <- function(sim) {
     
     sa_src <- sim$standAgeMap
     
-    # اگر CRS فرق داشت فقط یک بار project کن
-    if (!terra::same.crs(sa_src, planning)) {
-      sa_src <- terra::project(sa_src, terra::crs(planning), method = "near")
-    }
     
     # فقط crop (بدون filename)
     sa_window <- terra::crop(
@@ -408,7 +404,23 @@ buildPlanningGrid <- function(sim) {
     
     sim$standAgeMap <- terra::rast(sa_file)
   }
- 
+  # ---------------------------------------------------------
+  # FAST project + crop standAge to studyArea
+  # ---------------------------------------------------------
+  
+  if (!terra::same.crs(sim$standAgeMap, studyArea_v)) {
+    sim$standAgeMap <- terra::project(
+      sim$standAgeMap,
+      terra::crs(studyArea_v),
+      method = "near"
+    )
+  }
+  
+  sim$standAgeMap <- terra::crop(
+    sim$standAgeMap,
+    studyArea_v,
+    snap = "out"
+  )
   return(invisible(sim))
 
   }
