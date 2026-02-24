@@ -282,50 +282,41 @@ buildPlanningGrid <- function(sim) {
   ## ---------------------------------------------------------
   ## LandCover
   ## ---------------------------------------------------------
-  
   ## ---------------------------------------------------------
-  ## ---------------------------------------------------------
-  ## LandCover (SCANFI – Standalone)
+  ## LandCover (Upstream OR Download)
   ## ---------------------------------------------------------
   
-  ## ---------------------------------------------------------
-  ## LandCover (SCANFI FAO)
-  ## ---------------------------------------------------------
-
-  if (!is.null(sim$LandCover)) {
+  if (SpaDES.core::suppliedElsewhere("LandCover")) {
     
-    message("✔ Using LandCover supplied externally by user.")
+    message("✔ Using LandCover supplied from upstream module.")
     
   } else {
     
-    message("Building LandCover using LandR::prepInputs_SCANFI_LCC_FAO...")
+    message("LandCover not supplied. Downloading from Google Drive...")
     
     sim$LandCover <- Cache(
-      LandR::prepInputs_SCANFI_LCC_FAO,
+      prepInputs,
       
-      year = 2020,  
+      url = "https://drive.google.com/uc?export=download&id=1Gzhd5VnIZ7MqRSRJmNFiGfVUHrKkP9Ag",
       
-      maskTo    = sim$studyArea,
-      cropTo    = sim$rasterToMatch,
-      projectTo = sim$rasterToMatch,
+      destinationPath = file.path(dPath, "LandCover"),
       
-      disturbedCode = 240,
-      destinationPath = dPath,
+      targetFile = "LandCover_SCANFI_2020.tif",  # 👈 اسم دقیق فایل داخل Drive
+      
+      fun = terra::rast,
+      
+      cropTo    = sim$studyArea,
+      projectTo = sim$studyArea,
       
       overwrite = FALSE,
-      useCache  = TRUE,
       
-      userTags = c("LandCover", "SCANFI", "FAO")
+      userTags = c("LandCover", "Drive")
     )
     
     if (is.null(sim$LandCover)) {
-      stop("LandCover could not be created.")
+      stop("LandCover could not be loaded.")
     }
   }
-
-  ## ---------------------------------------------------------
-  ## standAgeMap
-  ## ---------------------------------------------------------
   
   ## ---------------------------------------------------------
   ## standAgeMap (NFI via LandR)
