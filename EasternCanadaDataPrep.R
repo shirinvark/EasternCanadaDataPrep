@@ -209,7 +209,7 @@ buildPlanningGrid <- function(sim) {
     
     # 4️⃣ فقط resample نهایی
     sim$standAge_250m <- terra::resample(sa_window, planning, method = "near")
-    message("👉 Starting standAge alignment")
+    message("👉 Finishing standAge alignment")
   }
   ## Rasterize FMU
   if (!"FMU_ID" %in% names(sim$FMU)) {
