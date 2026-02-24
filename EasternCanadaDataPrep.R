@@ -303,7 +303,7 @@ buildPlanningGrid <- function(sim) {
     sim$LandCover <- Cache(
       LandR::prepInputs_SCANFI_LCC_FAO,
       
-      year = P(sim)$dataYear,  
+      year = 2020,  
       
       maskTo    = sim$studyArea,
       cropTo    = sim$rasterToMatch,
