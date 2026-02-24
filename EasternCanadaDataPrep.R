@@ -155,8 +155,15 @@ buildPlanningGrid <- function(sim) {
   ## ---------------------------------------------------------
   
   if (!is.null(sim$standAgeMap)) {
+    sa_src <- sim$standAgeMap
+    
+    # 👇 این ۴ خط را اضافه کن
+    if (!terra::same.crs(sa_src, planning)) {
+      sa_src <- terra::project(sa_src, terra::crs(planning), method = "near")
+    }
+    
     sa_src <- terra::crop(
-      sim$standAgeMap,
+      sa_src,   # ✅ درست
       terra::ext(planning),
       snap = "out"
     )
@@ -362,16 +369,26 @@ buildPlanningGrid <- function(sim) {
     sa_dir <- file.path(dPath, "StandAge")
     dir.create(sa_dir, showWarnings = FALSE, recursive = TRUE)
     
-    sim$standAgeMap <- Cache(
-      prepInputs,
-      url = "https://drive.google.com/uc?export=download&id=1OdZ7Tznk53KceEyt9dFOBOkxDHEX5X0U",
-      destinationPath = sa_dir,
-      targetFile = "SCANFI_att_age_S_2020_v1_1.tif",
-      fun = terra::rast,
-      cropTo    = studyArea_sf,
-      projectTo = studyArea_sf,
-      overwrite = FALSE
-    )
+    sa_file <- file.path(sa_dir, "SCANFI_att_age_S_2020_v1_1.tif")
+    
+    if (!file.exists(sa_file)) {
+      
+      sim$standAgeMap <- Cache(
+        prepInputs,
+        url = "https://drive.google.com/uc?export=download&id=1OdZ7Tznk53KceEyt9dFOBOkxDHEX5X0U",
+        destinationPath = sa_dir,
+        targetFile = basename(sa_file),
+        fun = terra::rast,
+        cropTo    = studyArea_sf,
+        projectTo = studyArea_sf,
+        overwrite = FALSE
+      )
+      
+    } else {
+      
+      message("✔ standAgeMap found locally. Skipping download.")
+      sim$standAgeMap <- terra::rast(sa_file)
+    }
   }
   return(invisible(sim))
 
