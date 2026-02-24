@@ -142,8 +142,8 @@ buildPlanningGrid <- function(sim) {
   )
   
   res_lc <- terra::res(lc_src)[1]
-  fact <- as.integer(round(250 / res_lc))
-  
+  fact <- round(250 / res_lc)
+  if (fact < 1) fact <- 1  
   sim$LandCover_250m <- terra::aggregate(
     lc_src,
     fact = fact,
@@ -171,8 +171,8 @@ buildPlanningGrid <- function(sim) {
     res_sa <- terra::res(sa_src)[1]
     
     if (res_sa < 250) {
-      fact <- as.integer(round(250 / res_sa))
-      
+      fact <- round(250 / res_sa)
+      if (fact < 1) fact <- 1      
       sim$standAge_250m <- terra::aggregate(
         sa_src,
         fact = fact,
@@ -180,7 +180,11 @@ buildPlanningGrid <- function(sim) {
         na.rm = TRUE
       )
     } else {
-      sim$standAge_250m <- sa_src
+      sim$standAge_250m <- terra::resample(
+        sa_src,
+        planning,
+        method = "near"
+      )
     }
     
   }
