@@ -359,11 +359,17 @@ buildPlanningGrid <- function(sim) {
     
     lc_full <- terra::rast(lc_file)
     
+    # اول CRS را یکی کن
+    if (!terra::same.crs(lc_full, studyArea_v)) {
+      lc_full <- terra::project(lc_full, terra::crs(studyArea_v), method = "near")
+    }
+    
+    # بعد crop کن
     sim$LandCover <- terra::crop(
       lc_full,
       studyArea_v,
       snap = "out"
-    )  }
+    ) }
 
   ## =========================================================
   ## StandAgeMap (Upstream → Local → Download → FAST Align)
