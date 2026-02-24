@@ -362,7 +362,7 @@ buildPlanningGrid <- function(sim) {
     sim$LandCover <- terra::rast(lc_file)
     
   }
- 
+  return(invisible(sim))
 
   }
 
