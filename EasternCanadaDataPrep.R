@@ -168,11 +168,14 @@ buildPlanningGrid <- function(sim) {
     sim$LandCover_250m <- lc_agg
   }
   
-  ## Align standAge
-  sa_aligned <- terra::project(sim$standAgeMap, planning, method = "near")
-  sa_aligned <- terra::resample(sa_aligned, planning, method = "near")
-  sim$standAge_250m <- sa_aligned
-  
+  ## Align standAge (only if exists)
+  if (!is.null(sim$standAgeMap)) {
+    
+    sa_aligned <- terra::project(sim$standAgeMap, planning, method = "near")
+    sa_aligned <- terra::resample(sa_aligned, planning, method = "near")
+    sim$standAge_250m <- sa_aligned
+    
+  }
   ## Rasterize FMU
   if (!"FMU_ID" %in% names(sim$FMU)) {
     sim$FMU$FMU_ID <- seq_len(nrow(sim$FMU))
@@ -359,42 +362,7 @@ buildPlanningGrid <- function(sim) {
     sim$LandCover <- terra::rast(lc_file)
     
   }
-  ## ---------------------------------------------------------
-  ## standAgeMap (NFI via LandR)
-  ## ---------------------------------------------------------
-  
-  if (!is.null(sim$standAgeMap)) {
-    
-    message("✔ Using standAgeMap supplied externally.")
-    
-  } else {
-    
-    message("Building standAgeMap using LandR::prepInputsStandAgeMap...")
-    
-    sim$standAgeMap <- Cache(
-      LandR::prepInputsStandAgeMap,
-      dataSource = "SCANFI",
-      dataYear = 2020,
-      ageFun = terra::rast,
-      destinationPath = dPath,
-      rasterToMatch = sim$LandCover,
-      maskWithRTM = FALSE,   # 👈 اینجا بذار
-      overwrite = TRUE,
-      useCache = TRUE
-    )
-    
-    LandR::assertStandAgeMapAttr(sim$standAgeMap)
-    sim$imputedPixID <- attr(sim$standAgeMap, "imputedPixID")
-  }
-  ## Harmonize standAgeMap
-  if (!terra::same.crs(sim$standAgeMap, studyArea_v)) {
-    message("Reprojecting standAgeMap to studyArea CRS...")
-    sim$standAgeMap <- terra::project(sim$standAgeMap, studyArea_v, method = "near")
-  }
-  
-  message("Cropping standAgeMap to studyArea...")
-  sim$standAgeMap <- terra::crop(sim$standAgeMap, studyArea_v)
-  return(invisible(sim))
+ 
 
   }
 
