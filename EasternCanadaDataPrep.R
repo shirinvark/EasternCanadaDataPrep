@@ -360,7 +360,47 @@ buildPlanningGrid <- function(sim) {
     }
     
     sim$LandCover <- terra::rast(lc_file)
+    ## ---------------------------------------------------------
+    ## standAgeMap (Upstream → Local → Download → Fast Crop)
+    ## ---------------------------------------------------------
     
+    if (SpaDES.core::suppliedElsewhere("standAgeMap")) {
+      
+      message("✔ Using standAgeMap supplied from upstream module.")
+      
+    } else {
+      
+      sa_dir  <- file.path(dPath, "StandAge")
+      sa_file <- file.path(sa_dir, "SCANFI_att_age_S_2020_v1_1.tif")
+      
+      dir.create(sa_dir, showWarnings = FALSE, recursive = TRUE)
+      
+      ## اگر فایل قبلاً دانلود شده → دوباره دانلود نکن
+      if (!file.exists(sa_file)) {
+        
+        message("standAgeMap not found locally. Downloading from Google Drive...")
+        
+        Cache(
+          prepInputs,
+          url = "https://drive.google.com/uc?export=download&id=1OdZ7Tznk53KceEyt9dFOBOkxDHEX5X0U",
+          destinationPath = sa_dir,
+          targetFile = "SCANFI_att_age_S_2020_v1_1.tif",
+          fun = terra::rast,
+          overwrite = FALSE,
+          useCache = TRUE
+        )
+        
+      } else {
+        message("✔ standAgeMap found locally. Skipping download.")
+      }
+      
+      ## فقط rast کن — هیچ LandR pipeline اجرا نشه
+      sim$standAgeMap <- terra::rast(sa_file)
+      
+    }
+    
+    ## فقط یک crop سریع
+    sim$standAgeMap <- terra::crop(sim$standAgeMap, studyArea_v)
   }
   return(invisible(sim))
 
