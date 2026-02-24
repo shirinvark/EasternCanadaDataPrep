@@ -153,30 +153,22 @@ buildPlanningGrid <- function(sim) {
   
   if (!is.null(sim$standAgeMap)) {
     
-    message("👉 Starting standAge alignment")
-    
-    sa_src <- sim$standAgeMap
-    
-    
-   
-    
-    # اگر رزولوشن کمتر از 250m بود aggregate کن
-    res_sa <- terra::res(sa_window)[1]
+    res_sa <- terra::res(sim$standAgeMap)[1]
     
     if (res_sa < 250) {
       fact <- as.integer(round(250 / res_sa))
       
-      sa_window <- terra::aggregate(
-        sa_window,
+      sim$standAge_250m <- terra::aggregate(
+        sim$standAgeMap,
         fact = fact,
         fun = mean,
         na.rm = TRUE
       )
+      
+    } else {
+      sim$standAge_250m <- sim$standAgeMap
     }
     
-    sim$standAge_250m <- sa_window
-    
-    message("👉 Finished standAge alignment")
   }
   ## Rasterize FMU
   if (!"FMU_ID" %in% names(sim$FMU)) {
@@ -325,7 +317,6 @@ buildPlanningGrid <- function(sim) {
   ## LandCover (Upstream → Local → Download)
   ## ---------------------------------------------------------
   
-  ## ---- LandCover block ----
   if (SpaDES.core::suppliedElsewhere("LandCover")) {
     
     message("✔ Using LandCover supplied from upstream module.")
@@ -333,89 +324,48 @@ buildPlanningGrid <- function(sim) {
   } else {
     
     lc_dir  <- file.path(dPath, "LandCover")
-    lc_file <- file.path(lc_dir, "LandCover_SCANFI_2020.tif")
     
     dir.create(lc_dir, showWarnings = FALSE, recursive = TRUE)
     
-    if (!file.exists(lc_file)) {
-      Cache(
-        prepInputs,
-        url = "https://drive.google.com/uc?export=download&id=1Gzhd5VnIZ7MqRSRJmNFiGfVUHrKkP9Ag",
-        destinationPath = lc_dir,
-        targetFile = "LandCover_SCANFI_2020.tif",
-        fun = terra::rast,
-        overwrite = FALSE
-      )
-    }
-    
-    lc_full <- terra::rast(lc_file)
-    
-    # اول CRS را یکی کن
-    if (!terra::same.crs(lc_full, studyArea_v)) {
-      lc_full <- terra::project(lc_full, terra::crs(studyArea_v), method = "near")
-    }
-    
-    # بعد crop کن
-    sim$LandCover <- terra::crop(
-      lc_full,
-      studyArea_v,
-      snap = "out"
-    ) }
-
+    sim$LandCover <- Cache(
+      prepInputs,
+      url = "https://drive.google.com/uc?export=download&id=1Gzhd5VnIZ7MqRSRJmNFiGfVUHrKkP9Ag",
+      destinationPath = lc_dir,
+      targetFile = "LandCover_SCANFI_2020.tif",
+      fun = terra::rast,
+      cropTo    = studyArea_sf,
+      projectTo = studyArea_sf,
+      overwrite = FALSE
+    )
+  }
   ## =========================================================
   ## StandAgeMap (Upstream → Local → Download → FAST Align)
   ## =========================================================
   
-  sa_dir  <- file.path(dPath, "StandAge")
-  sa_file <- file.path(sa_dir, "SCANFI_att_age_S_2020_v1_1.tif")
-  
-  dir.create(sa_dir, showWarnings = FALSE, recursive = TRUE)
-  
-  ## -------------------------
-  ## 1️⃣ Acquire standAgeMap
-  ## -------------------------
+  ## =========================================================
+  ## StandAgeMap (Upstream → Download → Cache)
+  ## =========================================================
   
   if (SpaDES.core::suppliedElsewhere("standAgeMap")) {
     
     message("✔ Using standAgeMap from upstream.")
     
-  } else if (file.exists(sa_file)) {
-    
-    message("✔ standAgeMap found locally. Loading.")
-    sim$standAgeMap <- terra::rast(sa_file)
-    
   } else {
     
-    message("⬇ standAgeMap not found. Downloading...")
+    sa_dir <- file.path(dPath, "StandAge")
+    dir.create(sa_dir, showWarnings = FALSE, recursive = TRUE)
     
-    Cache(
+    sim$standAgeMap <- Cache(
       prepInputs,
-      url = "https://drive.usercontent.google.com/download?id=1OdZ7Tznk53KceEyt9dFOBOkxDHEX5X0U&export=download&authuser=0&confirm=t&uuid=f1a1cabd-b140-4ed6-ae14-7dfc5e48dd6b&at=APcXIO3h-bqLD_UvutmsiE9zGDCd%3A1771959734562",
+      url = "https://drive.google.com/uc?export=download&id=1OdZ7Tznk53KceEyt9dFOBOkxDHEX5X0U",
       destinationPath = sa_dir,
-      targetFile = basename(sa_file),
+      targetFile = "SCANFI_att_age_S_2020_v1_1.tif",
       fun = terra::rast,
+      cropTo    = studyArea_sf,
+      projectTo = studyArea_sf,
       overwrite = FALSE
     )
-    
-    sim$standAgeMap <- terra::rast(sa_file)
   }
-  # ---------------------------------------------------------
-  # FAST project + crop standAge to studyArea
-  # ---------------------------------------------------------
-  
-  if (!terra::same.crs(sim$standAgeMap, studyArea_v)) {
-    sim$standAgeMap <- terra::project(
-      sim$standAgeMap,
-      terra::crs(studyArea_v),
-      method = "near"
-    )
-  }
-  
-  sim$standAgeMap <- terra::crop(
-    sim$standAgeMap,
-    studyArea_v,
-    snap = "out"
-  )
   return(invisible(sim))
 
   }
