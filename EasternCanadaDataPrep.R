@@ -373,7 +373,7 @@ buildPlanningGrid <- function(sim) {
       rasterToMatch = sim$LandCover,
       maskWithRTM = FALSE,   # 👈 اینجا بذار
       overwrite = TRUE,
-      useCache = FALSE
+      useCache = TRUE
     )
     
     LandR::assertStandAgeMapAttr(sim$standAgeMap)
