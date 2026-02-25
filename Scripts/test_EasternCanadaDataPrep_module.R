@@ -41,8 +41,7 @@ studyArea <- sf::st_read(
 studyArea <- sf::st_make_valid(studyArea)
 
 # بسیار مهم: تبدیل به Canada Albers (ESRI:102001)
-studyArea <- sf::st_transform(studyArea, "ESRI:102001")
-
+studyArea <- sf::st_transform(studyArea, 3978)
 cat("Study Area CRS:\n")
 print(sf::st_crs(studyArea))
 print(studyArea)

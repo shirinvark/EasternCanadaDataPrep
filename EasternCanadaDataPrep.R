@@ -402,8 +402,10 @@ buildPlanningGrid <- function(sim) {
       message("✔ standAgeMap found locally. Cropping now...")
       
       sa_full <- terra::rast(sa_file)
-      
-      sa_crop <- terra::crop(sa_full, studyArea_v)
+      if (!terra::same.crs(sa_full, studyArea_v)) {
+        studyArea_v <- terra::project(studyArea_v, terra::crs(sa_full))
+      }
+      sa_crop <- terra::crop(sa_full, studyArea_v)ش
       sa_crop <- terra::mask(sa_crop, studyArea_v)
       
       sim$standAgeMap <- sa_crop
