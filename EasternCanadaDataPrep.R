@@ -151,7 +151,7 @@ buildPlanningGrid <- function(sim) {
     sim$LandCover_250m <- terra::aggregate(
       lc_src,
       fact = fact,
-      fun = terra::modal,
+      fun = "modal",
       na.rm = TRUE
     )
     
