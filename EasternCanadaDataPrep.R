@@ -408,9 +408,11 @@ buildPlanningGrid <- function(sim) {
       
       sim$standAgeMap <- sa_crop
     }
+  }  # end standAgeMap else
+  
   return(invisible(sim))
-
-  }}
+  
+}  # end .inputObjects
 
 ggplotFn <- function(data, ...) {
   ggplot2::ggplot(data, ggplot2::aes(TheSample)) +
