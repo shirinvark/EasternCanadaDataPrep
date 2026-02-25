@@ -410,7 +410,7 @@ buildPlanningGrid <- function(sim) {
     }
   return(invisible(sim))
 
-  }
+  }}
 
 ggplotFn <- function(data, ...) {
   ggplot2::ggplot(data, ggplot2::aes(TheSample)) +
