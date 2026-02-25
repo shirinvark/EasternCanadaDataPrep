@@ -28,44 +28,71 @@ SpaDES.project::getModule(
   overwrite  = TRUE
 )
 
-## =========================================================
-## 3) LOAD LandCover (MANDATORY in method 2)
-## =========================================================
-lc <- terra::rast(
-  "E:/MODULES_TESTS/SCANFI_att_nfiLandCover_CanadaLCCclassCodes_S_2010_v1_1.tif"
-)
 
 ## =========================================================
-## 4) INIT + RUN SIMULATION
+## 3) LOAD SMALL STUDY AREA (SUDBURY FMU TEST)
+## =========================================================
+studyArea <- sf::st_read(
+  "E:/EasternCanadaDataPrep/BOUNDARIES/Sudbury_FMU_5070.shp",
+  quiet = TRUE
+)
+
+# اطمینان از valid geometry
+studyArea <- sf::st_make_valid(studyArea)
+
+# بسیار مهم: تبدیل به Canada Albers (ESRI:102001)
+studyArea <- sf::st_transform(studyArea, "ESRI:102001")
+
+cat("Study Area CRS:\n")
+print(sf::st_crs(studyArea))
+print(studyArea)
+print(st_bbox(studyArea))
+print(st_crs(studyArea))
+terraOptions(threads = 8)
+## =========================================================
+## 4) INIT SIMULATION (WITH SMALL STUDY AREA)
 ## =========================================================
 sim <- simInit(
-  times   = list(start = 1, end = 1),
+  times = list(start = 0, end = 1),
   modules = "EasternCanadaDataPrep",
-  
+  objects = list(
+    studyArea = studyArea
+  ),
+  options = list(
+    spades.checkpoint = FALSE,
+    spades.save       = FALSE,
+    spades.progress   = FALSE
+  )
+)
+print(sim$LandCover)
+print(sim$standAgeMap)
+## =========================================================
+## 5) RUN SIMULATION
+## =========================================================
+system.time(
+  sim <- spades(sim)
 )
 
-sim <- spades(sim)
-
 ## =========================================================
-## 5) CHECK OUTPUTS
+## 6) CHECK OUTPUTS
 ## =========================================================
-names(sim)
 
-## Provinces check (safe)
-if ("Provinces" %in% names(sim)) {
-  print(names(sim$Provinces))
-  print(unique(sim$Provinces$jurisdiction))
-} else {
-  stop("❌ Provinces object was not created by EasternCanadaDataPrep")
-}
+cat("\nObjects in sim:\n")
+print(names(sim))
 
-## Planning grid check
+## Planning Grid
 if ("PlanningGrid_250m" %in% names(sim)) {
-  plot(sim$PlanningGrid_250m)
+  plot(sim$PlanningGrid_250m, main = "Planning Grid 250m")
+} else {
+  stop("❌ PlanningGrid_250m was not created")
 }
 
-## Legal mask check
+## Legal Mask
 if ("LegalConstraints" %in% names(sim)) {
-  plot(sim$LegalConstraints$LegalHarvestMask_250m)
+  plot(sim$LegalConstraints$LegalHarvestMask_250m,
+       main = "Legal Harvest Mask 250m")
+} else {
+  stop("❌ LegalConstraints not created")
 }
 
+cat("\n✅ Small test run completed successfully.\n")

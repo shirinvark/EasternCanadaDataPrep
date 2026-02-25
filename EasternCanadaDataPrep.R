@@ -399,10 +399,15 @@ buildPlanningGrid <- function(sim) {
       
     } else {
       
-      message("✔ standAgeMap found locally. Skipping download.")
-      sim$standAgeMap <- terra::rast(sa_file)
+      message("✔ standAgeMap found locally. Cropping now...")
+      
+      sa_full <- terra::rast(sa_file)
+      
+      sa_crop <- terra::crop(sa_full, studyArea_v)
+      sa_crop <- terra::mask(sa_crop, studyArea_v)
+      
+      sim$standAgeMap <- sa_crop
     }
-  }
   return(invisible(sim))
 
   }
