@@ -95,3 +95,4 @@ if ("LegalConstraints" %in% names(sim)) {
 }
 
 cat("\n✅ Small test run completed successfully.\n")
+

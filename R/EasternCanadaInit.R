@@ -4,7 +4,7 @@ EasternCanadaInit <- function(sim) {
   
   ## --------------------------------------------------------
   ## sanity checks (fail early, fail loud)
-  ## ---------------------------------------------------------
+  ## -------------------------------------------------------
   stopifnot(
     !is.null(sim$studyArea),
     !is.null(sim$FMU),
