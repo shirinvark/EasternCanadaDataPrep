@@ -361,12 +361,11 @@ buildPlanningGrid <- function(sim) {
     
     sim$LandCover <- Cache(
       prepInputs,
-      url = "https://drive.google.com/uc?export=download&id=1Gzhd5VnIZ7MqRSRJmNFiGfVUHrKkP9Ag",
+      url = "...",
       destinationPath = lc_dir,
       targetFile = "LandCover_SCANFI_2020.tif",
       fun = terra::rast,
       cropTo    = studyArea_sf,
-      projectTo = studyArea_sf,
       overwrite = FALSE
     )
   }
@@ -374,9 +373,6 @@ buildPlanningGrid <- function(sim) {
   ## StandAgeMap (Upstream → Local → Download → FAST Align)
   ## =========================================================
   
-  ## =========================================================
-  ## StandAgeMap (Upstream → Download → Cache)
-  ## =========================================================
   
   if (SpaDES.core::suppliedElsewhere("standAgeMap")) {
     
@@ -393,12 +389,11 @@ buildPlanningGrid <- function(sim) {
       
       sim$standAgeMap <- Cache(
         prepInputs,
-        url = "https://drive.google.com/uc?export=download&id=1OdZ7Tznk53KceEyt9dFOBOkxDHEX5X0U",
+        url = "...",
         destinationPath = sa_dir,
         targetFile = basename(sa_file),
         fun = terra::rast,
         cropTo    = studyArea_sf,
-        projectTo = studyArea_sf,
         overwrite = FALSE
       )
       
