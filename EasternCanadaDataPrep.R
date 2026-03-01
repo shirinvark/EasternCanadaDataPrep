@@ -419,7 +419,7 @@ buildPlanningGrid <- function(sim) {
     message("✔ Loading SCANFI stand age (2020)...")
     
     sim$standAgeMap <- terra::rast(sa_file)
-  } # end standAgeMap else
+  } # end standAgeMap 
   
   return(invisible(sim))
   
