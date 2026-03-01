@@ -394,27 +394,31 @@ buildPlanningGrid <- function(sim) {
   ## StandAgeMap (Upstream → Local → Download → FAST Align)
   ## =========================================================
   
+  ## =========================================================
+  ## StandAgeMap (SCANFI 2020 only)
+  ## =========================================================
+  
   if (SpaDES.core::suppliedElsewhere("standAgeMap", sim)) {
     
     message("✔ Using standAgeMap supplied from upstream or user.")
     
   } else {
     
-    message("⬇ standAgeMap not supplied. Generating via prepInputsStandAgeMap...")
+    sa_dir  <- file.path(dPath, "StandAge")
+    dir.create(sa_dir, showWarnings = FALSE, recursive = TRUE)
     
-    # ساخت rasterToMatch موقت
-    tmp_raster <- terra::rast(
-      extent = terra::ext(terra::vect(sim$studyArea)),
-      resolution = 250,
-      crs = terra::crs(terra::vect(sim$studyArea))
-    )
+    sa_file <- file.path(sa_dir, "SCANFI_att_age_S_2020_v1_1.tif")
     
-    sim$standAgeMap <- prepInputsStandAgeMap(
-      rasterToMatch   = tmp_raster,
-      studyArea       = sim$studyArea,
-      destinationPath = dPath,
-      dataYear = P(sim)$dataYear
-    )
+    if (!file.exists(sa_file)) {
+      stop(
+        "SCANFI_att_age_S_2020_v1_1.tif not found.\n",
+        "Please place the file in: ", sa_dir
+      )
+    }
+    
+    message("✔ Loading SCANFI stand age (2020)...")
+    
+    sim$standAgeMap <- terra::rast(sa_file)
   } # end standAgeMap else
   
   return(invisible(sim))
