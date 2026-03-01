@@ -126,27 +126,27 @@ buildPlanningGrid <- function(sim) {
   
   study_v <- terra::vect(sim$studyArea)
   
-  planning <- terra::rast(
+  # ---------------------------------------------------------
+  # 1) Create template raster (geometry only)
+  # ---------------------------------------------------------
+  planning_template <- terra::rast(
     extent = terra::ext(study_v),
     resolution = 250,
     crs = terra::crs(study_v)
   )
   
-
-  values(planning) <- NA
-  sim$PlanningGrid_250m <- planning
-  
-  ## Align LandCover
-  ## Fast window crop before projection
-  ## Step 1: window crop (fast)
+  # ---------------------------------------------------------
+  # 2) Align LandCover
+  # ---------------------------------------------------------
   lc_src <- sim$LandCover
-  if (!terra::same.crs(lc_src, planning)) {
-    lc_src <- terra::project(lc_src, terra::crs(planning), method = "near")
+  
+  if (!terra::same.crs(lc_src, planning_template)) {
+    lc_src <- terra::project(lc_src, terra::crs(planning_template), method = "near")
   }
   
   lc_src <- terra::crop(
-    lc_src,   # ✅ درست
-    terra::ext(planning),
+    lc_src,
+    terra::ext(planning_template),
     snap = "out"
   )
   
@@ -168,25 +168,38 @@ buildPlanningGrid <- function(sim) {
     
     sim$LandCover_250m <- terra::resample(
       lc_src,
-      planning,
+      planning_template,
       method = "near"
     )
-    
   }
-  ## ---------------------------------------------------------
-  ## Align standAge (FAST – crop first, no double warp)
-  ## ---------------------------------------------------------
   
+  # ---------------------------------------------------------
+  # 3) FINAL PlanningGrid (from LandCover footprint)
+  # ---------------------------------------------------------
+  message("Building PlanningGrid from LandCover footprint")
+  
+  sim$PlanningGrid_250m <- terra::ifel(
+    !is.na(sim$LandCover_250m),
+    1,
+    NA
+  )
+  
+  # Now use the REAL PlanningGrid for everything else
+  planning <- sim$PlanningGrid_250m
+  
+  # ---------------------------------------------------------
+  # 4) Align standAge
+  # ---------------------------------------------------------
   if (!is.null(sim$standAgeMap)) {
+    
     sa_src <- sim$standAgeMap
     
-    # 👇 این ۴ خط را اضافه کن
     if (!terra::same.crs(sa_src, planning)) {
       sa_src <- terra::project(sa_src, terra::crs(planning), method = "near")
     }
     
     sa_src <- terra::crop(
-      sa_src,   # ✅ درست
+      sa_src,
       terra::ext(planning),
       snap = "out"
     )
@@ -194,23 +207,31 @@ buildPlanningGrid <- function(sim) {
     res_sa <- terra::res(sa_src)[1]
     
     if (res_sa < 250) {
+      
       fact <- round(250 / res_sa)
-      if (fact < 1) fact <- 1      
+      if (fact < 1) fact <- 1
+      
       sim$standAge_250m <- terra::aggregate(
         sa_src,
         fact = fact,
         fun = mean,
         na.rm = TRUE
       )
+      
     } else {
+      
       sim$standAge_250m <- terra::resample(
         sa_src,
         planning,
         method = "near"
       )
     }
-    
   }
+  
+  # ---------------------------------------------------------
+  # 5) Rasterize FMU & CPCAD
+  # ---------------------------------------------------------
+  
   ## Rasterize FMU
   if (!"FMU_ID" %in% names(sim$FMU)) {
     sim$FMU$FMU_ID <- seq_len(nrow(sim$FMU))
@@ -246,6 +267,7 @@ buildPlanningGrid <- function(sim) {
   
   return(invisible(sim))
 }
+
 .inputObjects <- function(sim) {
   
   dPath <- asPath(getOption("reproducible.destinationPath", dataPath(sim)), 1)
