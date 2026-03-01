@@ -409,16 +409,24 @@ buildPlanningGrid <- function(sim) {
     
     sa_file <- file.path(sa_dir, "SCANFI_att_age_S_2020_v1_1.tif")
     
-    if (!file.exists(sa_file)) {
-      stop(
-        "SCANFI_att_age_S_2020_v1_1.tif not found.\n",
-        "Please place the file in: ", sa_dir
+    if (file.exists(sa_file)) {
+      
+      message("✔ SCANFI standAge found locally. Loading...")
+      sim$standAgeMap <- terra::rast(sa_file)
+      
+    } else {
+      
+      message("⬇ SCANFI not found locally. Downloading from Drive...")
+      
+      sim$standAgeMap <- Cache(
+        prepInputs,
+        url = "https://drive.google.com/uc?export=download&id=1OdZ7Tznk53KceEyt9dFOBOkxDHEX5X0U",
+        destinationPath = sa_dir,
+        targetFile = "SCANFI_att_age_S_2020_v1_1.tif",
+        fun = terra::rast,
+        overwrite = FALSE
       )
     }
-    
-    message("✔ Loading SCANFI stand age (2020)...")
-    
-    sim$standAgeMap <- terra::rast(sa_file)
   } # end standAgeMap 
   
   return(invisible(sim))
