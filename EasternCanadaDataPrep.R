@@ -47,6 +47,14 @@ defineModule(sim, list(
     ## .seed is optional: `list('init' = 123)` will `set.seed(123)` for the `init` event only.
     defineParameter(".seed", "list", list(), NA, NA,
                     "Named list of seeds to use for each event (names)."),
+    defineParameter(
+      "dataYear",
+      "numeric",
+      2001,
+      NA,
+      NA,
+      "Year of NFI stand age dataset (e.g., 2001 or 2011)"
+    ),
     defineParameter(".useCache", "logical", FALSE, NA, NA,
                     "Should caching of events or module be used?"),
     
@@ -385,44 +393,28 @@ buildPlanningGrid <- function(sim) {
   ## StandAgeMap (Upstream → Local → Download → FAST Align)
   ## =========================================================
   
-  
-  if (SpaDES.core::suppliedElsewhere("standAgeMap")) {
+  if (SpaDES.core::suppliedElsewhere("standAgeMap", sim)) {
     
-    message("✔ Using standAgeMap from upstream.")
+    message("✔ Using standAgeMap supplied from upstream or user.")
     
   } else {
     
-    sa_dir <- file.path(dPath, "StandAge")
-    dir.create(sa_dir, showWarnings = FALSE, recursive = TRUE)
+    message("⬇ standAgeMap not supplied. Generating via prepInputsStandAgeMap...")
     
-    sa_file <- file.path(sa_dir, "SCANFI_att_age_S_2020_v1_1.tif")
+    # ساخت rasterToMatch موقت
+    tmp_raster <- terra::rast(
+      extent = terra::ext(terra::vect(sim$studyArea)),
+      resolution = 250,
+      crs = terra::crs(terra::vect(sim$studyArea))
+    )
     
-    if (!file.exists(sa_file)) {
-      
-      sim$standAgeMap <- Cache(
-        prepInputs,
-        url = "...",
-        destinationPath = sa_dir,
-        targetFile = basename(sa_file),
-        fun = terra::rast,
-        cropTo    = studyArea_sf,
-        overwrite = FALSE
-      )
-      
-    } else {
-      
-      message("✔ standAgeMap found locally. Cropping now...")
-      
-      sa_full <- terra::rast(sa_file)
-      if (!terra::same.crs(sa_full, studyArea_v)) {
-        studyArea_v <- terra::project(studyArea_v, terra::crs(sa_full))
-      }
-      sa_crop <- terra::crop(sa_full, studyArea_v)
-      sa_crop <- terra::mask(sa_crop, studyArea_v)
-      
-      sim$standAgeMap <- sa_crop
-    }
-  }  # end standAgeMap else
+    sim$standAgeMap <- prepInputsStandAgeMap(
+      rasterToMatch   = tmp_raster,
+      studyArea       = sim$studyArea,
+      destinationPath = dPath,
+      dataYear = P(sim)$dataYear
+    )
+  } # end standAgeMap else
   
   return(invisible(sim))
   
