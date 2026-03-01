@@ -248,7 +248,10 @@ buildPlanningGrid <- function(sim) {
   if (!SpaDES.core::suppliedElsewhere("studyArea")) {
     
     message("🔵 Creating default studyArea (Eastern Canada)...")
-    
+    options(
+      reproducible.interactiveOnDownloadFail = FALSE,
+      reproducible.useCache = TRUE
+    )
     can <- rnaturalearth::ne_states(
       country = "Canada",
       returnclass = "sf"
@@ -349,25 +352,34 @@ buildPlanningGrid <- function(sim) {
   ## LandCover (Upstream → Local → Download)
   ## ---------------------------------------------------------
   
+  ## ---------------------------------------------------------
+  ## LandCover (Must come from upstream → else create fake)
+  ## ---------------------------------------------------------
+  
   if (SpaDES.core::suppliedElsewhere("LandCover")) {
     
     message("✔ Using LandCover supplied from upstream module.")
     
   } else {
     
-    lc_dir  <- file.path(dPath, "LandCover")
+    message("⚠ LandCover not supplied. Creating FAKE raster for standalone testing.")
     
-    dir.create(lc_dir, showWarnings = FALSE, recursive = TRUE)
+    study_v <- terra::vect(sim$studyArea)
     
-    sim$LandCover <- Cache(
-      prepInputs,
-      url = "...",
-      destinationPath = lc_dir,
-      targetFile = "LandCover_SCANFI_2020.tif",
-      fun = terra::rast,
-      cropTo    = studyArea_sf,
-      overwrite = FALSE
+    fake_lc <- terra::rast(
+      extent = terra::ext(study_v),
+      resolution = 30,
+      crs = terra::crs(study_v)
     )
+    
+    # سه کلاس فیک جنگل برای اینکه modal aggregation کار کند
+    values(fake_lc) <- sample(
+      c(210, 220, 230),
+      terra::ncell(fake_lc),
+      replace = TRUE
+    )
+    
+    sim$LandCover <- fake_lc
   }
   ## =========================================================
   ## StandAgeMap (Upstream → Local → Download → FAST Align)
