@@ -21,6 +21,7 @@ defineModule(sim, list(
     "reproducible",
     "sf",
     "terra",
+    "LandR" ,
     "rnaturalearth"
   ),  parameters = bindrows(
     #defineParameter("paramName", "paramClass", value, min, max, "parameter description"),
