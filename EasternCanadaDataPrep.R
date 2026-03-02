@@ -133,14 +133,23 @@ buildPlanningGrid <- function(sim) {
   message("🔵 Building PlanningGrid and aligning layers...")
   
   study_v <- terra::vect(sim$studyArea)
+  ext <- terra::ext(study_v)
   
+  width  <- ext[2] - ext[1]
+  height <- ext[4] - ext[3]
+  
+  ncol <- width / 250
+  nrow <- height / 250
+  
+  message("Estimated columns: ", round(ncol))
+  message("Estimated rows: ", round(nrow))
+  message("Estimated total cells: ", round(ncol * nrow))
   # ---------------------------------------------------------
   # 1) Create template raster (geometry only)
   # ---------------------------------------------------------
   planning_template <- terra::rast(
-    extent = terra::ext(study_v),
-    resolution = 250,
-    crs = terra::crs(study_v)
+    study_v,
+    resolution = 250
   )
   
   # ---------------------------------------------------------
@@ -425,9 +434,8 @@ buildPlanningGrid <- function(sim) {
     study_v <- terra::vect(sim$studyArea)
     
     fake_lc <- terra::rast(
-      extent = terra::ext(study_v),
-      resolution = 30,
-      crs = terra::crs(study_v)
+      study_v,
+      resolution = 30
     )
     
     # سه کلاس فیک جنگل برای اینکه modal aggregation کار کند
