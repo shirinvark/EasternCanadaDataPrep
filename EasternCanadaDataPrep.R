@@ -165,11 +165,10 @@ buildPlanningGrid <- function(sim) {
     fact <- round(250 / res_lc)
     if (fact < 1) fact <- 1
     
-    sim$LandCover_250m <- terra::aggregate(
+    sim$LandCover_250m <- terra::resample(
       lc_src,
-      fact = fact,
-      fun = "near",
-      na.rm = TRUE
+      planning_template,
+      method = "near"
     )
     
   } else {
