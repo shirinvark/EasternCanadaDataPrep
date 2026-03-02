@@ -169,7 +169,8 @@ buildPlanningGrid <- function(sim) {
   # Crop using studyArea in original CRS (safe & fast)
   study_v_original_crs <- terra::project(study_v, terra::crs(lc_src))
   
-  lc_src <- terra::crop(lc_src, study_v_original_crs)  
+  lc_src <- terra::crop(lc_src, study_v_original_crs)
+  lc_src <- terra::mask(lc_src, study_v_original_crs)  
   message("LandCover ncell AFTER crop (before project): ", terra::ncell(lc_src))
   
   # 2️⃣ Then project only the cropped piece
@@ -333,11 +334,9 @@ buildPlanningGrid <- function(sim) {
     
     small_extent <- sf::st_buffer(cent, dist = 10000)  # 10 km radius
     
-    small_bbox <- sf::st_as_sfc(sf::st_bbox(small_extent))
-    
     sim$studyArea <- sf::st_sf(
       id = 1,
-      geometry = small_bbox
+      geometry = small_extent
     )
     
     studyArea_sf <- sim$studyArea
