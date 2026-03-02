@@ -1,13 +1,19 @@
+## =========================================================
+## 0) CLEAN SESSION
+## =========================================================
 rm(list = ls())
 gc()
 
+## =========================================================
+## 1) LOAD PACKAGES
+## =========================================================
 library(SpaDES.core)
 library(SpaDES.project)
 library(terra)
 library(sf)
 
 ## =========================================================
-## 1) SET PATHS
+## 2) SET PATHS
 ## =========================================================
 setPaths(
   cachePath   = "E:/EasternCanadaDataPrep/cache",
@@ -20,79 +26,86 @@ setPaths(
 print(getPaths())
 
 ## =========================================================
-## 2) FORCE DOWNLOAD MODULE FROM GITHUB
+## 3) CLEAR CACHE
 ## =========================================================
-SpaDES.project::getModule(
-  modules    = "shirinvark/EasternCanadaDataPrep",
-  modulePath = getPaths()$modulePath,
-  overwrite  = TRUE
-)
-
+clearCache(getPaths()$cachePath)
 
 ## =========================================================
-## 3) LOAD SMALL STUDY AREA (SUDBURY FMU TEST)
+## 4) LOAD STUDY AREA
 ## =========================================================
 studyArea <- sf::st_read(
   "E:/EasternCanadaDataPrep/BOUNDARIES/Sudbury_FMU_5070.shp",
   quiet = TRUE
 )
 
-# اطمینان از valid geometry
 studyArea <- sf::st_make_valid(studyArea)
 
-# بسیار مهم: تبدیل به Canada Albers (ESRI:102001)
-studyArea <- sf::st_transform(studyArea, 3978)
-cat("Study Area CRS:\n")
-print(sf::st_crs(studyArea))
-print(studyArea)
-print(st_bbox(studyArea))
-print(st_crs(studyArea))
-terraOptions(threads = 8)
 ## =========================================================
-## 4) INIT SIMULATION (WITH SMALL STUDY AREA)
+## 5) GET DataPrep MODULE
+## =========================================================
+getModule(
+  modules    = "shirinvark/EasternCanadaDataPrep",
+  modulePath = getPaths()$modulePath,
+  overwrite  = FALSE
+)
+
+## =========================================================
+## 6) LOAD LandCover
+## =========================================================
+lc <- terra::rast(
+  "E:/MODULES_TESTS/SCANFI_att_nfiLandCover_CanadaLCCclassCodes_S_2010_v1_1.tif"
+)
+
+## =========================================================
+## ⚡ IMPORTANT: Crop LandCover to studyArea (correct CRS)
+## =========================================================
+
+# تبدیل studyArea به CRS لندکاور
+studyArea_lcCRS <- sf::st_transform(
+  studyArea,
+  crs = terra::crs(lc)
+)
+
+# تبدیل به SpatVector
+study_v <- terra::vect(studyArea_lcCRS)
+
+# crop
+lc <- terra::crop(lc, study_v)
+
+gc()
+
+# چک کن که کوچک شده
+terra::ncell(lc)
+
+## =========================================================
+## 7) INIT SIM (ONLY DataPrep)
 ## =========================================================
 sim <- simInit(
-  times = list(start = 0, end = 1),
+  times   = list(start = 1, end = 1),
   modules = "EasternCanadaDataPrep",
   objects = list(
+    LandCover = lc,
     studyArea = studyArea
   ),
-  options = list(
-    spades.checkpoint = FALSE,
-    spades.save       = FALSE,
-    spades.progress   = FALSE
+  params = list(
+    EasternCanadaDataPrep = list(
+      devMode = TRUE
+    )
   )
 )
-print(sim$LandCover)
-print(sim$standAgeMap)
-## =========================================================
-## 5) RUN SIMULATION
-## =========================================================
-system.time(
-  sim <- spades(sim)
-)
 
 ## =========================================================
-## 6) CHECK OUTPUTS
+## 8) RUN
 ## =========================================================
+sim <- spades(sim)
 
-cat("\nObjects in sim:\n")
-print(names(sim))
+## =========================================================
+## 9) CHECK OUTPUTS
+## =========================================================
+ls(sim)
 
-## Planning Grid
-if ("PlanningGrid_250m" %in% names(sim)) {
-  plot(sim$PlanningGrid_250m, main = "Planning Grid 250m")
-} else {
-  stop("❌ PlanningGrid_250m was not created")
-}
+terra::ext(sim$PlanningGrid_250m)
 
-## Legal Mask
-if ("LegalConstraints" %in% names(sim)) {
-  plot(sim$LegalConstraints$LegalHarvestMask_250m,
-       main = "Legal Harvest Mask 250m")
-} else {
-  stop("❌ LegalConstraints not created")
-}
+plot(sim$PlanningGrid_250m, main = "Planning Grid (DEV MODE)")
 
-cat("\n✅ Small test run completed successfully.\n")
-
+sim$LegalConstraints

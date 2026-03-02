@@ -26,79 +26,106 @@ setPaths(
 print(getPaths())
 
 ## =========================================================
-## 3) LOAD STUDY AREA: SUDBURY FMU
+## 3) LOAD STUDY AREA
 ## =========================================================
 studyArea <- sf::st_read(
   "E:/EasternCanadaDataPrep/BOUNDARIES/Sudbury_FMU_5070.shp",
   quiet = TRUE
 )
 
-# اطمینان از valid geometry
 studyArea <- sf::st_make_valid(studyArea)
 
-# چک CRS (باید EPSG:5070 باشه)
-sf::st_crs(studyArea)
-
 ## =========================================================
-## 4) DOWNLOAD MODULES FROM GITHUB
+## 4) DOWNLOAD MODULES
 ## =========================================================
 getModule(
   modules    = c(
     "shirinvark/EasternCanadaDataPrep",
-    "shirinvark/RiparianBuffers"
+    "shirinvark/RiparianBuffers",
+    "shirinvark/EasternCanadaLandbase"   # 👈 ماژول سوم اضافه شد
   ),
   modulePath = getPaths()$modulePath,
   overwrite  = FALSE
 )
-## 3) LOAD LandCover (MANDATORY in method 2)
+
 ## =========================================================
-lc <- terra::rast(
-  "E:/MODULES_TESTS/SCANFI_att_nfiLandCover_CanadaLCCclassCodes_S_2010_v1_1.tif"
-)
+## 5) LOAD LANDCOVER
 ## =========================================================
-## 5) INITIALIZE SIMULATION
+## =========================================================
+## 5) LOAD & CROP LANDCOVER
+## =========================================================
+
+# مسیر فایل اصلی
+landcoverPath <- "E:/MODULES_TESTS/SCANFI_att_nfiLandCover_CanadaLCCclassCodes_S_2010_v1_1.tif"
+
+# تابع crop
+cropLandCoverToStudyArea <- function(landcoverPath, studyArea) {
+  
+  message("Loading full LandCover raster...")
+  lc_full <- terra::rast(landcoverPath)
+  
+  # هماهنگ کردن CRS
+  if (!terra::same.crs(lc_full, terra::vect(studyArea))) {
+    studyArea <- sf::st_transform(studyArea, terra::crs(lc_full))
+  }
+  
+  message("Cropping to studyArea...")
+  lc_crop <- terra::crop(lc_full, terra::vect(studyArea))
+  
+  message("Masking outside studyArea...")
+  lc_mask <- terra::mask(lc_crop, terra::vect(studyArea))
+  
+  return(lc_mask)
+}
+
+# این خط مهمه 👇
+lc <- cropLandCoverToStudyArea(landcoverPath, studyArea)
+
+## CREATE TEMP STAND AGE MAP (DEV MODE)
+standAgeMap <- terra::rast(lc)
+standAgeMap[] <- sample(1:120, terra::ncell(standAgeMap), replace = TRUE)
+## =========================================================
+## 6) INITIALIZE SIMULATION
 ## =========================================================
 sim <- simInit(
   times   = list(start = 1, end = 1),
   modules = c(
     "EasternCanadaDataPrep",
-    "RiparianBuffers"
+    "RiparianBuffers",
+    "EasternCanadaLandbase"   # 👈 اضافه شد
   ),
   objects = list(
     LandCover = lc,
     studyArea = studyArea
   ),
   params = list(
-    EasternCanadaDataPrep = list(
-      devMode = TRUE   # ← اینو اضافه کن
-    ),
     RiparianBuffers = list(
-      hydroRaster_m = 25
-
-)
+      hydroRaster_m = 250
+    )
   )
 )
 
 ## ========================================================
-## 6) RUN SIMULATION
+## 7) RUN SIMULATION
 ## ========================================================
 sim <- spades(sim)
 
 ## =========================================================
-## 7) QUICK CHECKS
+## 8) CHECK OUTPUTS
 ## =========================================================
+
 ls(sim)
 
-# Provinces (باید فقط ON باشه)
-unique(sim$Provinces$jurisdiction)
+# forest base
+plot(sim$forestBase, main = "Forest Base")
 
-# Planning raster 
-sim$PlanningGrid_250m
-# Hydrology structure
-names(sim$Hydrology)
+# protected mask
+plot(sim$protectedMask, main = "Protected Mask")
 
-# Riparian output
-sim$Riparian
-plot(sim$Riparian$riparianFraction, main = "Riparian fraction – Sudbury FMU")
+# merchantable forest
+plot(sim$merchantableForest, main = "Merchantable Forest")
 
-message("✅ DataPrep + RiparianBuffers pipeline ran successfully (Sudbury FMU)")
+# analysis units
+plot(sim$analysisUnitMap, main = "Analysis Unit Map")
+
+message("✅ All three modules ran successfully")
