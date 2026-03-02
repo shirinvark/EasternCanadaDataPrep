@@ -152,45 +152,42 @@ buildPlanningGrid <- function(sim) {
     resolution = 250
   )
   
+  # Make LandCover match Planning CRS ONCE
+  
+  
   # ---------------------------------------------------------
   # 2) Align LandCover
   # ---------------------------------------------------------
+  # ---------------------------------------------------------
+  # 2) Align LandCover
+  # ---------------------------------------------------------
+  
   lc_src <- sim$LandCover
   message("LandCover ncell BEFORE crop: ", terra::ncell(lc_src))
-  #if (!terra::same.crs(lc_src, planning_template)) {
-   # lc_src <- terra::project(lc_src, terra::crs(planning_template), method = "near")
-  #}
   
-  # FAST extent crop
-  lc_src <- terra::crop(lc_src, terra::ext(planning_template))
+  # 1️⃣ First crop in original CRS (fast)
+  # Crop using studyArea in original CRS (safe & fast)
+  study_v_original_crs <- terra::project(study_v, terra::crs(lc_src))
   
-  message("LandCover ncell AFTER crop: ", terra::ncell(lc_src))
+  lc_src <- terra::crop(lc_src, study_v_original_crs)  
+  message("LandCover ncell AFTER crop (before project): ", terra::ncell(lc_src))
   
-  # (موقتاً mask رو انجام نمی‌دیم برای تست سرعت)
-  # lc_src <- terra::mask(lc_src, planning_template)
-  
-  res_lc <- terra::res(lc_src)[1]
-  
-  if (res_lc < 250) {
-    
-    fact <- round(250 / res_lc)
-    if (fact < 1) fact <- 1
-    
-    sim$LandCover_250m <- terra::resample(
+  # 2️⃣ Then project only the cropped piece
+  if (!terra::same.crs(lc_src, planning_template)) {
+    message("Projecting cropped LandCover only...")
+    lc_src <- terra::project(
       lc_src,
-      planning_template,
-      method = "near"
-    )
-    
-  } else {
-    terra::writeRaster(lc_src, "temp_lc.tif", overwrite = TRUE)
-    lc_src <- terra::rast("temp_lc.tif")
-    sim$LandCover_250m <- terra::resample(
-      lc_src,
-      planning_template,
+      terra::crs(planning_template),
       method = "near"
     )
   }
+  
+  # 3️⃣ Now resample to 250m grid
+  sim$LandCover_250m <- terra::resample(
+    lc_src,
+    planning_template,
+    method = "near"
+  )
   
   # ---------------------------------------------------------
   # 3) FINAL PlanningGrid (from LandCover footprint)
