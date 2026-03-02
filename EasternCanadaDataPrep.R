@@ -317,8 +317,7 @@ buildPlanningGrid <- function(sim) {
   ## ---------------------------------------------------------
   ## DEV MODE: shrink studyArea for fast debugging
   ## ---------------------------------------------------------
-  if (sim$params$EasternCanadaDataPrep$devMode) {
-    
+  if (P(sim)$devMode) {    
     message("⚡ devMode = TRUE → using small test extent")
     
     cent <- sf::st_centroid(sim$studyArea)
