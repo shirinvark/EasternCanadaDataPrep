@@ -187,7 +187,7 @@ buildPlanningGrid <- function(sim) {
     sim$LandCover_250m <- terra::resample(
       lc_src,
       planning_template,
-      method = "modal"
+      method = "near"
     )
   }
   
