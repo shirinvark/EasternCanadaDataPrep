@@ -156,7 +156,7 @@ buildPlanningGrid <- function(sim) {
   # 2) Align LandCover
   # ---------------------------------------------------------
   lc_src <- sim$LandCover
-  
+  message("LandCover ncell BEFORE crop: ", terra::ncell(lc_src))
   if (!terra::same.crs(lc_src, planning_template)) {
     lc_src <- terra::project(lc_src, terra::crs(planning_template), method = "near")
   }
