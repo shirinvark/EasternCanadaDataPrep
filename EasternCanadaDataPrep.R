@@ -170,7 +170,8 @@ buildPlanningGrid <- function(sim) {
   study_v_original_crs <- terra::project(study_v, terra::crs(lc_src))
   
   lc_src <- terra::crop(lc_src, study_v_original_crs)
-  lc_src <- terra::mask(lc_src, study_v_original_crs)  
+  lc_src <- terra::mask(lc_src, study_v_original_crs) 
+  lc_src <- terra::trim(lc_src)
   message("LandCover ncell AFTER crop (before project): ", terra::ncell(lc_src))
   
   # 2️⃣ Then project only the cropped piece
@@ -296,21 +297,15 @@ buildPlanningGrid <- function(sim) {
   if (!SpaDES.core::suppliedElsewhere("studyArea")) {
     
     message("🔵 Creating default studyArea (Eastern Canada)...")
-    options(
-      reproducible.interactiveOnDownloadFail = FALSE,
-      reproducible.useCache = TRUE
-    )
+    
     can <- rnaturalearth::ne_states(
       country = "Canada",
       returnclass = "sf"
     )
     
     east <- can[can$name_en %in% c(
-      "Ontario",
-      "Quebec",
-      "New Brunswick",
-      "Nova Scotia",
-      "Prince Edward Island",
+      "Ontario","Quebec","New Brunswick",
+      "Nova Scotia","Prince Edward Island",
       "Newfoundland and Labrador"
     ), ]
     
@@ -334,8 +329,8 @@ buildPlanningGrid <- function(sim) {
     
     small_extent <- sf::st_buffer(cent, dist = 10000)  # 10 km radius
     
-    sim$studyArea <- sf::st_sf(
-      id = 1,
+    sim$studyArea <- sf::st_as_sf(
+      data.frame(id = 1),
       geometry = small_extent
     )
     
