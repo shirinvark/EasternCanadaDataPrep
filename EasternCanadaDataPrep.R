@@ -161,11 +161,13 @@ buildPlanningGrid <- function(sim) {
     lc_src <- terra::project(lc_src, terra::crs(planning_template), method = "near")
   }
   
-  lc_src <- terra::crop(
-    lc_src,
-    terra::ext(planning_template),
-    snap = "out"
-  )
+  # FAST extent crop
+  lc_src <- terra::crop(lc_src, terra::ext(planning_template))
+  
+  message("LandCover ncell AFTER crop: ", terra::ncell(lc_src))
+  
+  # (موقتاً mask رو انجام نمی‌دیم برای تست سرعت)
+  # lc_src <- terra::mask(lc_src, planning_template)
   
   res_lc <- terra::res(lc_src)[1]
   
