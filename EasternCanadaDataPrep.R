@@ -157,9 +157,9 @@ buildPlanningGrid <- function(sim) {
   # ---------------------------------------------------------
   lc_src <- sim$LandCover
   message("LandCover ncell BEFORE crop: ", terra::ncell(lc_src))
-  if (!terra::same.crs(lc_src, planning_template)) {
-    lc_src <- terra::project(lc_src, terra::crs(planning_template), method = "near")
-  }
+  #if (!terra::same.crs(lc_src, planning_template)) {
+   # lc_src <- terra::project(lc_src, terra::crs(planning_template), method = "near")
+  #}
   
   # FAST extent crop
   lc_src <- terra::crop(lc_src, terra::ext(planning_template))
@@ -183,7 +183,8 @@ buildPlanningGrid <- function(sim) {
     )
     
   } else {
-    
+    terra::writeRaster(lc_src, "temp_lc.tif", overwrite = TRUE)
+    lc_src <- terra::rast("temp_lc.tif")
     sim$LandCover_250m <- terra::resample(
       lc_src,
       planning_template,
