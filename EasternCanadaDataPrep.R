@@ -49,6 +49,14 @@ defineModule(sim, list(
     defineParameter(".seed", "list", list(), NA, NA,
                     "Named list of seeds to use for each event (names)."),
     defineParameter(
+      "devMode",
+      "logical",
+      TRUE,
+      NA,
+      NA,
+      "If TRUE, run on small test extent for fast debugging"
+    ),
+    defineParameter(
       "dataYear",
       "numeric",
       2001,
@@ -307,6 +315,27 @@ buildPlanningGrid <- function(sim) {
   
   studyArea_sf <- sim$studyArea
   studyArea_v  <- terra::vect(studyArea_sf)
+  ## ---------------------------------------------------------
+  ## DEV MODE: shrink studyArea for fast debugging
+  ## ---------------------------------------------------------
+  if (sim$params$EasternCanadaDataPrep$devMode) {
+    
+    message("⚡ devMode = TRUE → using small test extent")
+    
+    cent <- sf::st_centroid(sim$studyArea)
+    
+    small_extent <- sf::st_buffer(cent, dist = 10000)  # 10 km radius
+    
+    small_bbox <- sf::st_as_sfc(sf::st_bbox(small_extent))
+    
+    sim$studyArea <- sf::st_sf(
+      id = 1,
+      geometry = small_bbox
+    )
+    
+    studyArea_sf <- sim$studyArea
+    studyArea_v  <- terra::vect(studyArea_sf)
+  }
   ## ---------------------------------------------------------
   
   ## ---------------------------------------------------------
