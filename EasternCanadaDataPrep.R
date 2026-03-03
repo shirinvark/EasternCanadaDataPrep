@@ -327,17 +327,23 @@ buildPlanningGrid <- function(sim) {
   ## ---------------------------------------------------------
   ## DEV MODE: shrink studyArea for fast debugging
   ## ---------------------------------------------------------
-  if (P(sim)$devMode) {    
+  if (P(sim)$devMode) {
     
-    message("⚡ devMode = TRUE → using small test extent")
+    message("⚡ devMode = TRUE → using fixed small test extent")
     
-    sa_centroid <- sf::st_centroid(sim$studyArea)
+    # یک نقطه ثابت در Ontario
+    test_point <- sf::st_sfc(
+      sf::st_point(c(-79.5, 46.5)),
+      crs = 4326
+    )
     
-    small_extent <- sf::st_buffer(sa_centroid, dist = 10000)
+    test_point <- sf::st_transform(test_point, "ESRI:102001")
+    
+    small_extent <- sf::st_buffer(test_point, dist = 10000)
     
     sim$studyArea <- sf::st_sf(
       id = 1,
-      geometry = sf::st_geometry(small_extent)
+      geometry = small_extent
     )
     
     studyArea_sf <- sim$studyArea
