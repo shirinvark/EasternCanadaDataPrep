@@ -421,8 +421,11 @@ buildPlanningGrid <- function(sim) {
     
     message("⚠ LandCover not supplied. Creating FAKE raster for standalone testing.")
     
-    study_v <- terra::vect(sim$studyArea)
-    
+    if (inherits(sim$studyArea, "SpatVector")) {
+      study_v <- sim$studyArea
+    } else {
+      study_v <- terra::vect(sim$studyArea)
+    }    
     fake_lc <- terra::rast(
       study_v,
       resolution = 30
