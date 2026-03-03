@@ -124,7 +124,12 @@ buildPlanningGrid <- function(sim) {
   
   message("🔵 Building PlanningGrid and aligning layers...")
   
-  study_v <- terra::vect(sim$studyArea)
+  if (inherits(sim$studyArea, "SpatVector")) {
+    study_v <- sim$studyArea
+  } else {
+    study_v <- terra::vect(sim$studyArea)
+  }
+  
   ext <- terra::ext(study_v)
   
   width  <- ext[2] - ext[1]
