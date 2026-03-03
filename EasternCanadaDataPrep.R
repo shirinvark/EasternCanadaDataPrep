@@ -172,6 +172,11 @@ buildPlanningGrid <- function(sim) {
   lc_src <- terra::crop(lc_src, study_v_original_crs)
   lc_src <- terra::mask(lc_src, study_v_original_crs) 
   lc_src <- terra::trim(lc_src)
+  message("Extent after trim: ")
+  print(terra::ext(lc_src))
+  
+  message("StudyArea extent: ")
+  print(terra::ext(study_v_original_crs))
   message("LandCover ncell AFTER crop (before project): ", terra::ncell(lc_src))
   
   # 2️⃣ Then project only the cropped piece
