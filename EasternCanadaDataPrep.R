@@ -192,25 +192,19 @@ buildPlanningGrid <- function(sim) {
   } else {
     study_v_original_crs <- study_v
   }  
-  lc_src <- terra::crop(lc_src, study_v_original_crs)
-  
+  lc_src <- terra::crop(lc_src, study_v_original_crs, snap = "out")
+  lc_src <- terra::writeRaster(lc_src, tempfile(), overwrite = TRUE)
   if (is.null(lc_src) || terra::ncell(lc_src) == 0) {
-    stop("❌ Crop produced empty raster. No overlap between LandCover and studyArea.")
+    stop("❌ Crop produced empty raster.")
   }
   
-
-  # فقط اگر حداقل یک سلول غیر NA داشت trim کن
-  if (!all(is.na(terra::values(lc_src)))) {
-    lc_src <- terra::trim(lc_src)
-  } else {
-    stop("❌ After mask, raster contains only NA. CRS or extent mismatch.")
-  }
-  message("Extent after trim: ")
+  message("Extent after crop: ")
   print(terra::ext(lc_src))
   
   message("StudyArea extent: ")
   print(terra::ext(study_v_original_crs))
-  message("LandCover ncell AFTER crop (before project): ", terra::ncell(lc_src))
+  
+  message("LandCover ncell AFTER crop: ", terra::ncell(lc_src))
   
   # 2️⃣ Then project only the cropped piece
   if (!terra::same.crs(lc_src, planning_template)) {
