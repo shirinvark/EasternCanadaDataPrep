@@ -198,8 +198,7 @@ buildPlanningGrid <- function(sim) {
     stop("❌ Crop produced empty raster. No overlap between LandCover and studyArea.")
   }
   
-  lc_src <- terra::mask(lc_src, study_v_original_crs)
-  
+
   # فقط اگر حداقل یک سلول غیر NA داشت trim کن
   if (!all(is.na(terra::values(lc_src)))) {
     lc_src <- terra::trim(lc_src)
