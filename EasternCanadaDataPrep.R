@@ -327,8 +327,11 @@ buildPlanningGrid <- function(sim) {
   }
   
   studyArea_sf <- sim$studyArea
-  studyArea_v  <- terra::vect(studyArea_sf)
-  ## ---------------------------------------------------------
+  if (inherits(studyArea_sf, "SpatVector")) {
+    studyArea_v <- studyArea_sf
+  } else {
+    studyArea_v <- terra::vect(studyArea_sf)
+  }  ## ---------------------------------------------------------
  
   ## ---------------------------------------------------------
   
