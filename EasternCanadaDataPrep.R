@@ -190,10 +190,19 @@ buildPlanningGrid <- function(sim) {
   }
   
   # 3️⃣ Now resample to 250m grid
-  sim$LandCover_250m <- terra::resample(
+  fact <- round(250 / terra::res(lc_src)[1])
+  
+  sim$LandCover_250m <- terra::aggregate(
     lc_src,
-    planning_template,
-    method = "near"
+    fact = fact,
+    fun = modal,
+    na.rm = TRUE
+  )
+  
+  # crop نهایی برای اطمینان از match شدن با planning
+  sim$LandCover_250m <- terra::crop(
+    sim$LandCover_250m,
+    planning_template
   )
   
   # ---------------------------------------------------------
