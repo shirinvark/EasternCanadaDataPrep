@@ -227,16 +227,10 @@ buildPlanningGrid <- function(sim) {
     lc_src,
     fact = fact,
     fun = modal,
-    na.rm = TRUE
+    na.rm = FALSE
   )
   
-  # crop نهایی برای match شدن با planning grid
-  sim$LandCover_250m <- terra::resample(
-    sim$LandCover_250m,
-    planning_template,
-    method = "near"
-  )
-  
+ 
   # ---------------------------------------------------------
   # 3) FINAL PlanningGrid (from LandCover footprint)
   # ---------------------------------------------------------
