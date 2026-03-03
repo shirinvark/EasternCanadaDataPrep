@@ -61,10 +61,33 @@ defineModule(sim, list(
     
   ),
   inputObjects = bindrows(
-    #expectsInput("objectName", "objectClass", "input object description", sourceURL, ...),
-    expectsInput("studyArea", objectClass = c("sf", "SpatVector"), desc = "Study area polygon used for cropping and masking", sourceURL = NA),
-    expectsInput("CPCAD",objectClass = c("sf", "SpatVector"), desc = "CPCAD protected areas — generated inside this module", sourceURL = NA),
-    expectsInput("FMU",objectClass = c("sf", "SpatVector"), desc = "Forest Management Units — generated inside this module",sourceURL = NA)),
+    
+    expectsInput("studyArea",
+                 objectClass = c("sf", "SpatVector"),
+                 desc = "Study area polygon",
+                 sourceURL = NA),
+    
+    expectsInput("CPCAD",
+                 objectClass = c("sf", "SpatVector"),
+                 desc = "Protected areas",
+                 sourceURL = NA),
+    
+    expectsInput("FMU",
+                 objectClass = c("sf", "SpatVector"),
+                 desc = "Forest Management Units",
+                 sourceURL = NA),
+    
+    expectsInput("LandCover",
+                 objectClass = "SpatRaster",
+                 desc = "Land cover raster",
+                 sourceURL = NA),
+    
+    expectsInput("standAgeMap",
+                 objectClass = "SpatRaster",
+                 desc = "Stand age raster",
+                 sourceURL = NA)
+    
+  ),
   outputObjects = bindrows(
     
     createsOutput(
@@ -164,11 +187,25 @@ buildPlanningGrid <- function(sim) {
   
   # 1️⃣ First crop in original CRS (fast)
   # Crop using studyArea in original CRS (safe & fast)
-  study_v_original_crs <- terra::project(study_v, terra::crs(lc_src))
-  
+  if (!terra::same.crs(study_v, lc_src)) {
+    study_v_original_crs <- terra::project(study_v, terra::crs(lc_src))
+  } else {
+    study_v_original_crs <- study_v
+  }  
   lc_src <- terra::crop(lc_src, study_v_original_crs)
-  lc_src <- terra::mask(lc_src, study_v_original_crs) 
-  lc_src <- terra::trim(lc_src)
+  
+  if (is.null(lc_src) || terra::ncell(lc_src) == 0) {
+    stop("❌ Crop produced empty raster. No overlap between LandCover and studyArea.")
+  }
+  
+  lc_src <- terra::mask(lc_src, study_v_original_crs)
+  
+  # فقط اگر حداقل یک سلول غیر NA داشت trim کن
+  if (!all(is.na(terra::values(lc_src)))) {
+    lc_src <- terra::trim(lc_src)
+  } else {
+    stop("❌ After mask, raster contains only NA. CRS or extent mismatch.")
+  }
   message("Extent after trim: ")
   print(terra::ext(lc_src))
   
