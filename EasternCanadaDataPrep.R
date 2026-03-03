@@ -49,14 +49,6 @@ defineModule(sim, list(
     defineParameter(".seed", "list", list(), NA, NA,
                     "Named list of seeds to use for each event (names)."),
     defineParameter(
-      "devMode",
-      "logical",
-      TRUE,
-      NA,
-      NA,
-      "If TRUE, run on small test extent for fast debugging"
-    ),
-    defineParameter(
       "dataYear",
       "numeric",
       2001,
@@ -189,9 +181,11 @@ buildPlanningGrid <- function(sim) {
     )
   }
   
-  # 3️⃣ Now resample to 250m grid
-  fact <- round(250 / terra::res(lc_src)[1])
+  # 3️⃣ Aggregate safely to 250m (FOR DEV MODE)
   
+  # اجباری: fact ثابت برای 30m → 250m
+  res_lc <- terra::res(lc_src)[1]
+  fact <- max(1, round(250 / res_lc))  
   sim$LandCover_250m <- terra::aggregate(
     lc_src,
     fact = fact,
@@ -199,10 +193,11 @@ buildPlanningGrid <- function(sim) {
     na.rm = TRUE
   )
   
-  # crop نهایی برای اطمینان از match شدن با planning
-  sim$LandCover_250m <- terra::crop(
+  # crop نهایی برای match شدن با planning grid
+  sim$LandCover_250m <- terra::resample(
     sim$LandCover_250m,
-    planning_template
+    planning_template,
+    method = "near"
   )
   
   # ---------------------------------------------------------
@@ -334,30 +329,7 @@ buildPlanningGrid <- function(sim) {
   studyArea_sf <- sim$studyArea
   studyArea_v  <- terra::vect(studyArea_sf)
   ## ---------------------------------------------------------
-  ## DEV MODE: shrink studyArea for fast debugging
-  ## ---------------------------------------------------------
-  if (P(sim)$devMode) {
-    
-    message("⚡ devMode = TRUE → using fixed small test extent")
-    
-    # یک نقطه ثابت در Ontario
-    test_point <- sf::st_sfc(
-      sf::st_point(c(-79.5, 46.5)),
-      crs = 4326
-    )
-    
-    test_point <- sf::st_transform(test_point, "ESRI:102001")
-    
-    small_extent <- sf::st_buffer(test_point, dist = 10000)
-    
-    sim$studyArea <- sf::st_sf(
-      id = 1,
-      geometry = small_extent
-    )
-    
-    studyArea_sf <- sim$studyArea
-    studyArea_v  <- terra::vect(studyArea_sf)
-  }
+ 
   ## ---------------------------------------------------------
   
   ## ---------------------------------------------------------
