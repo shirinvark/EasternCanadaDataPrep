@@ -323,16 +323,14 @@ buildPlanningGrid <- function(sim) {
   ## DEV MODE: shrink studyArea for fast debugging
   ## ---------------------------------------------------------
   if (P(sim)$devMode) {    
+    
     message("⚡ devMode = TRUE → using small test extent")
     
-    cent <- sf::st_centroid(sim$studyArea)
+    sa_centroid <- sf::st_centroid(studyArea)
     
-    small_extent <- sf::st_buffer(cent, dist = 10000)  # 10 km radius
+    small_extent <- sf::st_buffer(sa_centroid, dist = 10000)  # 10 km
     
-    sim$studyArea <- sf::st_as_sf(
-      data.frame(id = 1),
-      geometry = small_extent
-    )
+    sim$studyArea <- small_extent
     
     studyArea_sf <- sim$studyArea
     studyArea_v  <- terra::vect(studyArea_sf)

@@ -46,7 +46,7 @@ studyArea <- sf::st_make_valid(studyArea)
 getModule(
   modules    = "shirinvark/EasternCanadaDataPrep",
   modulePath = getPaths()$modulePath,
-  overwrite  = FALSE
+  overwrite  = TRUE
 )
 
 ## =========================================================
