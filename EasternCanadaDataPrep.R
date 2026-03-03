@@ -328,11 +328,11 @@ buildPlanningGrid <- function(sim) {
     
     sa_centroid <- sf::st_centroid(sim$studyArea)
     
-    small_extent <- sf::st_buffer(sa_centroid, dist = 10000)  # 10 km
+    small_extent <- sf::st_buffer(sa_centroid, dist = 10000)
     
-    sim$studyArea <- sf::st_as_sf(
-      data.frame(id = 1),
-      geometry = small_extent
+    sim$studyArea <- sf::st_sf(
+      id = 1,
+      geometry = sf::st_geometry(small_extent)
     )
     
     studyArea_sf <- sim$studyArea
