@@ -193,7 +193,7 @@ buildPlanningGrid <- function(sim) {
     study_v_original_crs <- study_v
   }  
   lc_src <- terra::crop(lc_src, study_v_original_crs, snap = "out")
-  lc_src <- terra::writeRaster(lc_src, tempfile(), overwrite = TRUE)
+  lc_src <- terra::writeRaster(lc_src, tempfile(fileext = ".tif"), overwrite = TRUE)
   if (is.null(lc_src) || terra::ncell(lc_src) == 0) {
     stop("❌ Crop produced empty raster.")
   }
