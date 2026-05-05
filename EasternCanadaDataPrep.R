@@ -38,6 +38,14 @@ defineModule(sim, list(
     
     defineParameter(".plotInterval", "numeric", NA, NA, NA,
                     "Describes the simulation time interval between plot events."),
+    defineParameter(
+      "useFakeLandCover",
+      "logical",
+      TRUE,
+      NA,
+      NA,
+      "If TRUE, creates fake LandCover when missing (for development)"
+    ),
     defineParameter(".saveInitialTime", "numeric", NA, NA, NA,
                     "Describes the simulation time at which the first save event should occur."),
     defineParameter(".saveInterval", "numeric", NA, NA, NA,
@@ -436,33 +444,29 @@ buildPlanningGrid <- function(sim) {
   }
   
   
-  ## ---------------------------------------------------------
-  ## LandCover (Upstream → Local → Download)
-  ## ---------------------------------------------------------
-  
-  ## ---------------------------------------------------------
-  ## LandCover (Must come from upstream → else create fake)
+
+  ## LandCover (Upstream → Fake fallback)
   ## ---------------------------------------------------------
   
   if (SpaDES.core::suppliedElsewhere("LandCover")) {
     
     message("✔ Using LandCover supplied from upstream module.")
     
-  } else {
+  } else if (isTRUE(sim$useFakeLandCover)) {
     
-    message("⚠ LandCover not supplied. Creating FAKE raster for standalone testing.")
+    message("⚠ No LandCover supplied → using FAKE data (DEV MODE)")
     
     if (inherits(sim$studyArea, "SpatVector")) {
       study_v <- sim$studyArea
     } else {
       study_v <- terra::vect(sim$studyArea)
-    }    
+    }
+    
     fake_lc <- terra::rast(
       study_v,
       resolution = 30
     )
     
-    # سه کلاس فیک جنگل برای اینکه modal aggregation کار کند
     values(fake_lc) <- sample(
       c(210, 220, 230),
       terra::ncell(fake_lc),
@@ -470,10 +474,11 @@ buildPlanningGrid <- function(sim) {
     )
     
     sim$LandCover <- fake_lc
+    
+  } else {
+    
+    stop("❌ LandCover must be provided by upstream module (useFakeLandCover = FALSE)")
   }
-  ## =========================================================
-  ## StandAgeMap (Upstream → Local → Download → FAST Align)
-  ## =========================================================
   
   ## =========================================================
   ## StandAgeMap (SCANFI 2020 only)
