@@ -190,8 +190,24 @@ buildPlanningGrid <- function(sim) {
     study_v_original_crs <- study_v
   }
   
-  lc_src <- terra::crop(lc_src, study_v_original_crs, snap = "out")
+  message("STARTING EXTENT CROP")
   
+  lc_src <- terra::crop(
+    lc_src,
+    terra::ext(study_v_original_crs),
+    snap = "out"
+  )
+  
+  message("EXTENT CROP FINISHED")
+  
+  message("STARTING MASK")
+  
+  lc_src <- terra::mask(
+    lc_src,
+    study_v_original_crs
+  )
+  
+  message("MASK FINISHED")  
   if (is.null(lc_src) || terra::ncell(lc_src) == 0) {
     stop("❌ Crop produced empty raster.")
   }
