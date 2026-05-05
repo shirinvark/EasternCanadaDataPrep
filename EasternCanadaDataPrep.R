@@ -173,52 +173,36 @@ buildPlanningGrid <- function(sim) {
   message("Estimated rows: ", round(nrow))
   message("Estimated total cells: ", round(ncol * nrow))
   # ---------------------------------------------------------
-  # 1) Create template raster (geometry only)
-  # ---------------------------------------------------------
-  planning_template <- terra::rast(
-    study_v,
-    resolution = 250
-  )
+ 
   
-  # Make LandCover match Planning CRS ONCE
-  
-  
-  # ---------------------------------------------------------
-  # 2) Align LandCover
-  # ---------------------------------------------------------
   # ---------------------------------------------------------
   # 2) Align LandCover
   # ---------------------------------------------------------
   
   lc_src <- sim$LandCover
+  
   message("LandCover ncell BEFORE crop: ", terra::ncell(lc_src))
   
-  # 1️⃣ First crop in original CRS (fast)
-  # Crop using studyArea in original CRS (safe & fast)
+  # 1️⃣ crop (safe)
   if (!terra::same.crs(study_v, lc_src)) {
     study_v_original_crs <- terra::project(study_v, terra::crs(lc_src))
   } else {
     study_v_original_crs <- study_v
-  }  
+  }
+  
   lc_src <- terra::crop(lc_src, study_v_original_crs, snap = "out")
-  lc_src <- terra::writeRaster(lc_src, tempfile(fileext = ".tif"), overwrite = TRUE)
-  cat("Unique values BEFORE aggregate:\n")
-  print(unique(values(lc_src)))
+  
   if (is.null(lc_src) || terra::ncell(lc_src) == 0) {
     stop("❌ Crop produced empty raster.")
   }
   
-  message("Extent after crop: ")
-  print(terra::ext(lc_src))
-  
-  message("StudyArea extent: ")
-  print(terra::ext(study_v_original_crs))
-  
-  message("LandCover ncell AFTER crop: ", terra::ncell(lc_src))
-  
-  # 2️⃣ Then project only the cropped piece
+  # 2️⃣ project to analysis CRS
+  planning_template <- terra::rast(
+    terra::ext(study_v),
+    resolution = 250,
+    crs = terra::crs(study_v)
+  )  
   if (!terra::same.crs(lc_src, planning_template)) {
-    message("Projecting cropped LandCover only...")
     lc_src <- terra::project(
       lc_src,
       terra::crs(planning_template),
@@ -226,19 +210,37 @@ buildPlanningGrid <- function(sim) {
     )
   }
   
-  # 3️⃣ Aggregate safely to 250m (FOR DEV MODE)
-  
-  # اجباری: fact ثابت برای 30m → 250m
+  # 3️⃣ resample or aggregate
   res_lc <- terra::res(lc_src)[1]
-  fact <- max(1, round(250 / res_lc))  
-  sim$LandCover_250m <- terra::aggregate(
-    lc_src,
-    fact = fact,
-    fun = modal,
-    na.rm = FALSE
-  )
   
- 
+  if (res_lc < 250) {
+    
+    fact <- round(250 / res_lc)
+    if (fact < 1) fact <- 1
+    
+    sim$LandCover_250m <- terra::aggregate(
+      lc_src,
+      fact = fact,
+      fun = modal,
+      na.rm = FALSE
+    )
+    
+  } else {
+    
+    message("LandCover resolution >= 250m → using resample")
+    
+    sim$LandCover_250m <- terra::resample(
+      lc_src,
+      planning_template,
+      method = "near"
+    )
+  }
+  
+  # 4️⃣ mask (optional but safe)
+  sim$LandCover_250m <- terra::mask(
+    sim$LandCover_250m,
+    planning_template
+  )
   # ---------------------------------------------------------
   # 3) FINAL PlanningGrid (from LandCover footprint)
   # ---------------------------------------------------------
@@ -444,47 +446,48 @@ buildPlanningGrid <- function(sim) {
   }
   
   
-
-  ## LandCover (Upstream → Fake fallback)
-  ## ---------------------------------------------------------
+  # =========================================================
+  # LandCover
+  # =========================================================
   
-  ## ---------------------------------------------------------
-  ## LandCover (Upstream → Fake fallback ALWAYS)
-  ## ---------------------------------------------------------
-  
-  if (SpaDES.core::suppliedElsewhere("LandCover")) {
+  if (SpaDES.core::suppliedElsewhere("LandCover"))  {
     
-    message("✔ Using LandCover supplied from upstream module.")
+    message("✔ Using LandCover supplied from upstream or user.")
     
   } else {
     
-    message("⚠ LandCover not supplied → creating FAKE raster")
+    lc_dir <- file.path(dPath, "LandCover")
+    dir.create(lc_dir, showWarnings = FALSE, recursive = TRUE)
     
-    if (inherits(sim$studyArea, "SpatVector")) {
-      study_v <- sim$studyArea
+    lc_file <- file.path(lc_dir, "LandCover.tif")
+    
+    if (file.exists(lc_file)) {
+      
+      message("✔ LandCover found locally. Loading...")
+      
+      sim$LandCover <- terra::rast(lc_file)
+      
     } else {
-      study_v <- terra::vect(sim$studyArea)
+      
+      message("⬇ LandCover not found locally. Downloading from Drive...")
+      
+      sim$LandCover <- Cache(
+        prepInputs,
+        url = "https://drive.google.com/uc?export=download&id=1Gzhd5VnIZ7MqRSRJmNFiGfVUHrKkP9Ag",
+        destinationPath = lc_dir,
+        targetFile = "LandCover.tif",
+        fun = terra::rast,
+        overwrite = FALSE
+      )
     }
-    
-    fake_lc <- terra::rast(
-      study_v,
-      resolution = 5000
-    )
-    
-    values(fake_lc) <- sample(
-      c(210, 220, 230),
-      terra::ncell(fake_lc),
-      replace = TRUE
-    )
-    
-    sim$LandCover <- fake_lc
-  }
+  }   # ← این براکت خیلی مهم بود
   
-  ## ==================================
-  ## StandAgeMap (SCANFI 2020 only)
-  ## =========================================================
   
-  if (SpaDES.core::suppliedElsewhere("standAgeMap", sim)) {
+  # =========================================================
+  # StandAgeMap (SCANFI 2020 only)
+  # =========================================================
+  
+  if (SpaDES.core::suppliedElsewhere("standAgeMap")) {
     
     message("✔ Using standAgeMap supplied from upstream or user.")
     
@@ -513,7 +516,7 @@ buildPlanningGrid <- function(sim) {
         overwrite = FALSE
       )
     }
-  } # end standAgeMap 
+  }
   
   return(invisible(sim))
   
