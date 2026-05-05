@@ -468,7 +468,7 @@ buildPlanningGrid <- function(sim) {
     
     fake_lc <- terra::rast(
       study_v,
-      resolution = 30
+      resolution = 5000
     )
     
     values(fake_lc) <- sample(
@@ -480,7 +480,7 @@ buildPlanningGrid <- function(sim) {
     sim$LandCover <- fake_lc
   }
   
-  ## =========================================================
+  ## ==================================
   ## StandAgeMap (SCANFI 2020 only)
   ## =========================================================
   
