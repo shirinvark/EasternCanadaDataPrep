@@ -448,13 +448,17 @@ buildPlanningGrid <- function(sim) {
   ## LandCover (Upstream → Fake fallback)
   ## ---------------------------------------------------------
   
+  ## ---------------------------------------------------------
+  ## LandCover (Upstream → Fake fallback ALWAYS)
+  ## ---------------------------------------------------------
+  
   if (SpaDES.core::suppliedElsewhere("LandCover")) {
     
     message("✔ Using LandCover supplied from upstream module.")
     
-  } else if (isTRUE(sim$useFakeLandCover)) {
+  } else {
     
-    message("⚠ No LandCover supplied → using FAKE data (DEV MODE)")
+    message("⚠ LandCover not supplied → creating FAKE raster")
     
     if (inherits(sim$studyArea, "SpatVector")) {
       study_v <- sim$studyArea
@@ -474,10 +478,6 @@ buildPlanningGrid <- function(sim) {
     )
     
     sim$LandCover <- fake_lc
-    
-  } else {
-    
-    stop("❌ LandCover must be provided by upstream module (useFakeLandCover = FALSE)")
   }
   
   ## =========================================================
