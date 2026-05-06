@@ -205,11 +205,34 @@ buildPlanningGrid <- function(sim) {
     crs = terra::crs(study_v)
   )  
   message("STARTING PROJECT/RESAMPLE")
+  message("STARTING PRE-AGGREGATION")
   
+
+  res_lc <- terra::res(lc_src)[1]
+  
+  fact <- floor(250 / res_lc)
+  
+  if (is.na(fact) || fact < 1) {
+    fact <- 1
+  }  
+
+  if (fact > 1) {
+    
+    lc_src <- terra::aggregate(
+      lc_src,
+      fact = fact,
+      fun = terra::modal,
+      na.rm = TRUE
+    )
+    
+  }
+  
+  message("PRE-AGGREGATION FINISHED")
   sim$LandCover_250m <- terra::project(
     lc_src,
     planning_template,
-    method = "near"
+    method = "near",
+    mask = TRUE
   )
   
   message("PROJECT/RESAMPLE FINISHED")
@@ -217,14 +240,26 @@ buildPlanningGrid <- function(sim) {
   # ---------------------------------------------------------
   # 3) FINAL PlanningGrid (from LandCover footprint)
   # ---------------------------------------------------------
-  message("Building PlanningGrid from LandCover footprint")
   
-  sim$PlanningGrid_250m <- sim$LandCover_250m
+
+  message("Building PlanningGrid from studyArea")
   
-  values(sim$PlanningGrid_250m) <- ifelse(
-    is.na(values(sim$PlanningGrid_250m)),
-    NA,
-    1
+  sim$PlanningGrid_250m <- terra::rast(
+    ext = terra::ext(study_v),
+    resolution = 250,
+    crs = terra::crs(study_v)
+  )
+  
+  sim$PlanningGrid_250m <- terra::init(
+    sim$PlanningGrid_250m,
+    fun = function(x) 1
+  )
+  study_v <- terra::aggregate(
+    study_v
+  )
+  sim$PlanningGrid_250m <- terra::mask(
+    sim$PlanningGrid_250m,
+    study_v
   )
   
   # Now use the REAL PlanningGrid for everything else
