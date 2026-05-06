@@ -238,7 +238,7 @@ buildPlanningGrid <- function(sim) {
   )
   
   message("PROJECT/RESAMPLE FINISHED")
-  browser()
+  #browser()
   
   # -----------------------------------------------------
   # ---------------------------------------------------------
