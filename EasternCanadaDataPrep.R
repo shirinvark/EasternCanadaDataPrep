@@ -250,8 +250,7 @@ buildPlanningGrid <- function(sim) {
   sim$PlanningGrid_250m <- terra::rast(
     ext = terra::ext(study_v),
     resolution = 250,
-    crs = terra::crs(study_v),
-    vals = 1
+    crs = terra::crs(study_v)
   )
   
   planning <- sim$PlanningGrid_250m
