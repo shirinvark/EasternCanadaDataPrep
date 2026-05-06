@@ -302,14 +302,14 @@ buildPlanningGrid <- function(sim) {
   if (!"FMU_ID" %in% names(sim$FMU)) {
     sim$FMU$FMU_ID <- seq_len(nrow(sim$FMU))
   }
-  
+  browser()
   fmu_r <- terra::rasterize(
     sim$FMU,
     planning,
     field = "FMU_ID",
     touches = FALSE
   )
-  
+  browser()
   ## Rasterize CPCAD
   prot_r <- terra::rasterize(
     sim$CPCAD,
