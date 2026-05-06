@@ -30,7 +30,7 @@ EasternCanadaDataPrep is a SpaDES module that prepares and harmonizes
 core spatial inputs for forest modelling applications in Eastern Canada.
 
 The module defines a spatial planning framework, harmonizes spatial
-layers to a common grid, and identifies areas that are legally available
+layers to a common spatial framework, and identifies areas that are legally available
 for harvesting, prior to applying ecological or management rules.
 
 This module is intentionally limited to spatial harmonization and legal
@@ -60,10 +60,10 @@ To answer this question, the module:
 ## What this module does
 
 ✔ Defines a study area for Eastern Canada  
-✔ Loads and harmonizes Forest Management Units (FMUs)  
+✔ Loads, harmonizes, and rasterizes Forest Management Units (FMUs)
 ✔ Loads and filters protected and conserved areas (CPCAD)  
 ✔ Constructs a PlanningGrid_250m (default: 250 m)  
-✔ Aligns land-cover raster (if supplied)  
+✔ Loads, downloads, and harmonizes land-cover raster data  
 ✔ Loads or downloads SCANFI 2020 stand age  
 ✔ Creates a LegalHarvestMask_250m  
 
@@ -101,7 +101,7 @@ ESRI:102001
 | `studyArea` | `sf` / `SpatVector` | Polygon defining the modelling extent |
 | `FMU` | `sf` / `SpatVector` | Forest Management Unit boundaries |
 | `CPCAD` | `sf` / `SpatVector` | Protected and conserved areas |
-| `LandCover` | `SpatRaster` (optional) | Land cover raster supplied by upstream module |
+| `LandCover` | `SpatRaster` (optional) | Land cover raster supplied upstream or loaded automatically |
 | `standAgeMap` | `SpatRaster` (optional) | SCANFI 2020 stand age raster |
 
 If not provided by the user, required vector inputs are automatically
@@ -121,7 +121,7 @@ Eastern Canada study area including:
 - Prince Edward Island  
 - Newfoundland and Labrador  
 
-All layers are cropped, masked, and reprojected to the project CRS.
+All layers are spatially aligned to the project framework using cropping, aggregation, reprojection, and resampling where appropriate.
 
 ---
 
@@ -130,7 +130,7 @@ All layers are cropped, masked, and reprojected to the project CRS.
 Forest Management Units are:
 
 - Loaded as vector polygons  
-- Cropped and masked to the study area  
+- Cropped to the study area extent
 - Reprojected to ESRI:102001  
 - Rasterized to the planning grid  
 
@@ -149,7 +149,7 @@ Canadian Protected and Conserved Areas Database (CPCAD).
 
 Processing includes:
 
-- Cropping and masking to the study area  
+- Cropping to the study area extent
 - Reprojection to ESRI:102001  
 - Policy-level filtering only  
 
@@ -157,22 +157,27 @@ Filtered CPCAD areas represent legal exclusions from harvesting.
 
 ---
 
-## Land cover — upstream dependency
+## Land cover handling
 
-Land cover is treated as an optional upstream dependency.
+Land cover can be supplied upstream or automatically loaded by the module.
 
 If supplied, it must be provided as:
 
 - Object name: `sim$LandCover`  
 - Type: `terra::SpatRaster`  
 
-If not supplied, a temporary synthetic raster is created for standalone testing.
+If not supplied upstream, the module attempts to load a local raster copy.
+If no local copy is found, the raster is automatically downloaded
+from the project data repository.
 
 Within EasternCanadaDataPrep, land cover is handled spatially only:
 
-- Reprojection to the project CRS  
-- Cropping and masking to the study area  
-- Aggregation or resampling to 250 m  
+- Cropping in the native raster CRS  
+- Pre-aggregation to reduce computational cost  
+- Projection to the project CRS  
+- Alignment to the 250 m planning grid  
+
+This workflow avoids unnecessary reprojection of extremely large rasters and improves scalability for large Eastern Canada analyses. 
 
 The harmonized raster is exposed as:
 
@@ -192,11 +197,14 @@ The module uses a three-level fallback logic:
 2. If found locally → loaded  
 3. Otherwise → automatically downloaded from a project Drive repository  
 
-The raster is then:
+The raster is processed using a computationally optimized workflow:
 
-- Reprojected if necessary  
-- Cropped to the study area  
-- Aggregated or resampled to 250 m  
+- Cropping in the native raster CRS  
+- Pre-aggregation to reduce raster size  
+- Projection to the project CRS  
+- Resampling and alignment to the PlanningGrid_250m  
+
+This workflow substantially reduces reprojection costs for very large SCANFI rasters. 
 
 The aligned output is exposed as:
 
@@ -226,7 +234,7 @@ A binary LegalHarvestMask_250m is created where:
 - Cells fall inside an FMU  
 - Cells are not inside protected or conserved areas  
 
-This mask represents legal availability only.
+This mask represents legal harvest eligibility only and does not imply ecological suitability or operational feasibility.
 
 ---
 
@@ -236,7 +244,7 @@ This mask represents legal availability only.
 |--------|--------|-------------|
 | PlanningGrid_250m | SpatRaster | Coarse-resolution planning grid |
 | LegalConstraints | list | FMU raster, CPCAD raster, legal harvest mask |
-| LandCover_250m | SpatRaster | Harmonized land cover (if supplied) |
+| LandCover_250m | SpatRaster | Harmonized land cover raster |
 | standAge_250m | SpatRaster | Harmonized SCANFI 2020 stand age |
 
 Structure of legal constraints:
@@ -308,9 +316,24 @@ It provides spatial and legal constraints only.
 
 ---
 
+## Computational strategy
+
+Large national-scale rasters can exceed tens of billions of cells.
+
+To improve computational performance and memory efficiency, the module applies the following strategy:
+
+- Crop before reprojection whenever possible  
+- Aggregate large rasters before projection  
+- Align all outputs to a common planning template  
+- Rasterize vector layers only after spatial reduction  
+
+This workflow substantially reduces reprojection cost and improves scalability for large-area simulations.
+
+---
+
 ## Summary
 
-EasternCanadaDataPrep defines where harvest could legally occur,
-not where it should occur.
+EasternCanadaDataPrep defines where harvesting is legally possible,
+without interpreting ecological suitability or management intent.
 
 This separation ensures a clean, modular, and scalable forest modelling architecture.
