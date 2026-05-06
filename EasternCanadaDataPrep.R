@@ -237,7 +237,7 @@ buildPlanningGrid <- function(sim) {
   
   message("PROJECT/RESAMPLE FINISHED")
   
-  # ---------------------------------------------------------
+  # -----------------------------------------------------
   # 3) FINAL PlanningGrid (from LandCover footprint)
   # ---------------------------------------------------------
   
