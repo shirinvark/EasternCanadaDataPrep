@@ -219,10 +219,12 @@ buildPlanningGrid <- function(sim) {
   # ---------------------------------------------------------
   message("Building PlanningGrid from LandCover footprint")
   
-  sim$PlanningGrid_250m <- terra::ifel(
-    !is.na(sim$LandCover_250m),
-    1,
-    NA
+  sim$PlanningGrid_250m <- sim$LandCover_250m
+  
+  values(sim$PlanningGrid_250m) <- ifelse(
+    is.na(values(sim$PlanningGrid_250m)),
+    NA,
+    1
   )
   
   # Now use the REAL PlanningGrid for everything else
