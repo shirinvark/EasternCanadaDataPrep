@@ -252,7 +252,7 @@ buildPlanningGrid <- function(sim) {
     resolution = 250,
     crs = terra::crs(study_v)
   )
-  
+  message("FINISH create PlanningGrid")
   planning <- sim$PlanningGrid_250m
   # ---------------------------------------------------------
   # 4) Align standAge
