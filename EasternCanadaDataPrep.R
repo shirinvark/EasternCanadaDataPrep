@@ -257,11 +257,11 @@ buildPlanningGrid <- function(sim) {
   # ---------------------------------------------------------
   # 4) Align standAge
   # ---------------------------------------------------------
-  browser()
   
   if (!is.null(sim$standAgeMap)) {
     
     sa_src <- sim$standAgeMap
+    browser()
     
     if (!terra::same.crs(sa_src, planning)) {
       sa_src <- terra::project(sa_src, terra::crs(planning), method = "near")
@@ -305,7 +305,7 @@ buildPlanningGrid <- function(sim) {
   if (!"FMU_ID" %in% names(sim$FMU)) {
     sim$FMU$FMU_ID <- seq_len(nrow(sim$FMU))
   }
-  browser()
+  #browser()
   fmu_r <- terra::rasterize(
     sim$FMU,
     planning,
