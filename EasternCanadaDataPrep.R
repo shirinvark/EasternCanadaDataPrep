@@ -144,8 +144,9 @@ doEvent.EasternCanadaDataPrep <- function(sim, eventTime, eventType) {
 ## jurisdiction-aware processing in downstream modules
 ## (e.g., province-based riparian policies in EasternCanadaHydrology).
 ## This module does not apply or interpret those policies.
+#browser()
 buildPlanningGrid <- function(sim) {
-  browser()
+ # browser()
   
   message("🔵 Building PlanningGrid and aligning layers...")
   
@@ -237,6 +238,7 @@ buildPlanningGrid <- function(sim) {
   )
   
   message("PROJECT/RESAMPLE FINISHED")
+  browser()
   
   # -----------------------------------------------------
   # ---------------------------------------------------------
