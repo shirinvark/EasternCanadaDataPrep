@@ -305,7 +305,7 @@ buildPlanningGrid <- function(sim) {
       sa_src <- terra::aggregate(
         sa_src,
         fact = fact_sa,
-        fun = fun = modal,
+        fun = terra::modal,
         na.rm = TRUE
       )
       
