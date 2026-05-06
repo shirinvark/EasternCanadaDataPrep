@@ -258,45 +258,74 @@ buildPlanningGrid <- function(sim) {
   # 4) Align standAge
   # ---------------------------------------------------------
   
+  # ---------------------------------------------------------
+  # 4) Align standAge
+  # ---------------------------------------------------------
+  
   if (!is.null(sim$standAgeMap)) {
     
     sa_src <- sim$standAgeMap
-    browser()
     
-    if (!terra::same.crs(sa_src, planning)) {
-      sa_src <- terra::project(sa_src, terra::crs(planning), method = "near")
-    }
+    # ---------------------------------------------
+    # crop FIRST in native CRS
+    # ---------------------------------------------
     
-    sa_src <- terra::crop(
-      sa_src,
-      terra::ext(planning),
-      snap = "out"
-    )
-    
-    res_sa <- terra::res(sa_src)[1]
-    
-    if (res_sa < 250) {
+    if (!terra::same.crs(study_v, sa_src)) {
       
-      fact <- round(250 / res_sa)
-      if (fact < 1) fact <- 1
-      
-      sim$standAge_250m <- terra::aggregate(
-        sa_src,
-        fact = fact,
-        fun = mean,
-        na.rm = TRUE
+      study_v_sa <- terra::project(
+        study_v,
+        terra::crs(sa_src)
       )
       
     } else {
       
-      sim$standAge_250m <- terra::resample(
-        sa_src,
-        planning,
-        method = "near"
-      )
+      study_v_sa <- study_v
+      
     }
+    
+    sa_src <- terra::crop(
+      sa_src,
+      terra::ext(study_v_sa),
+      snap = "out"
+    )
+    
+    # ---------------------------------------------
+    # aggregate BEFORE project
+    # ---------------------------------------------
+    
+    res_sa <- terra::res(sa_src)[1]
+    
+    fact_sa <- round(250 / res_sa)    
+    if (is.na(fact_sa) || fact_sa < 1) {
+      fact_sa <- 1
+    }
+    
+    if (fact_sa > 1) {
+      
+      sa_src <- terra::aggregate(
+        sa_src,
+        fact = fact_sa,
+        fun = fun = modal,
+        na.rm = TRUE
+      )
+      
+    }
+    
+    # ---------------------------------------------
+    # project AFTER crop + aggregate
+    # ---------------------------------------------
+    
+    sa_src <- terra::project(
+      sa_src,
+      terra::crs(planning),
+      method = "near"
+    )
+    sim$standAge_250m <- terra::resample(
+      sa_src,
+      planning,
+      method = "near"
+    )
   }
-  
   # ---------------------------------------------------------
   # 5) Rasterize FMU & CPCAD
   # ---------------------------------------------------------
