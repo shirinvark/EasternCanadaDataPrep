@@ -38,14 +38,7 @@ defineModule(sim, list(
     
     defineParameter(".plotInterval", "numeric", NA, NA, NA,
                     "Describes the simulation time interval between plot events."),
-    defineParameter(
-      "useFakeLandCover",
-      "logical",
-      TRUE,
-      NA,
-      NA,
-      "If TRUE, creates fake LandCover when missing (for development)"
-    ),
+   
     defineParameter(".saveInitialTime", "numeric", NA, NA, NA,
                     "Describes the simulation time at which the first save event should occur."),
     defineParameter(".saveInterval", "numeric", NA, NA, NA,
@@ -211,50 +204,16 @@ buildPlanningGrid <- function(sim) {
     resolution = 250,
     crs = terra::crs(study_v)
   )  
-  if (!terra::same.crs(lc_src, planning_template)) {
-    lc_src <- terra::project(
-      lc_src,
-      terra::crs(planning_template),
-      method = "near"
-    )
-  }
+  message("STARTING PROJECT/RESAMPLE")
   
-  # 3️⃣ resample or aggregate
-  res_lc <- terra::res(lc_src)[1]
-  
-  if (res_lc < 250) {
-    
-    fact <- round(250 / res_lc)
-    if (fact < 1) fact <- 1
-    
-    sim$LandCover_250m <- terra::aggregate(
-      lc_src,
-      fact = fact,
-      fun = modal,
-      na.rm = FALSE
-    )
-    
-  } else {
-    
-    message("LandCover resolution >= 250m → using resample")
-    
-    sim$LandCover_250m <- terra::resample(
-      lc_src,
-      planning_template,
-      method = "near"
-    )
-  }
-  
-  # 4️⃣ mask AFTER aggregation (much faster)
-  
-  message("STARTING FINAL MASK")
-  
-  sim$LandCover_250m <- terra::mask(
-    sim$LandCover_250m,
-    planning_template
+  sim$LandCover_250m <- terra::project(
+    lc_src,
+    planning_template,
+    method = "near"
   )
   
-  message("FINAL MASK FINISHED")
+  message("PROJECT/RESAMPLE FINISHED")
+  
   # ---------------------------------------------------------
   # 3) FINAL PlanningGrid (from LandCover footprint)
   # ---------------------------------------------------------
