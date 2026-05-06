@@ -200,14 +200,7 @@ buildPlanningGrid <- function(sim) {
   
   message("EXTENT CROP FINISHED")
   
-  message("STARTING MASK")
-  
-  lc_src <- terra::mask(
-    lc_src,
-    study_v_original_crs
-  )
-  
-  message("MASK FINISHED")  
+   
   if (is.null(lc_src) || terra::ncell(lc_src) == 0) {
     stop("❌ Crop produced empty raster.")
   }
@@ -252,11 +245,16 @@ buildPlanningGrid <- function(sim) {
     )
   }
   
-  # 4️⃣ mask (optional but safe)
+  # 4️⃣ mask AFTER aggregation (much faster)
+  
+  message("STARTING FINAL MASK")
+  
   sim$LandCover_250m <- terra::mask(
     sim$LandCover_250m,
     planning_template
   )
+  
+  message("FINAL MASK FINISHED")
   # ---------------------------------------------------------
   # 3) FINAL PlanningGrid (from LandCover footprint)
   # ---------------------------------------------------------
