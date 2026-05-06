@@ -145,6 +145,7 @@ doEvent.EasternCanadaDataPrep <- function(sim, eventTime, eventType) {
 ## (e.g., province-based riparian policies in EasternCanadaHydrology).
 ## This module does not apply or interpret those policies.
 buildPlanningGrid <- function(sim) {
+  browser()
   
   message("🔵 Building PlanningGrid and aligning layers...")
   
