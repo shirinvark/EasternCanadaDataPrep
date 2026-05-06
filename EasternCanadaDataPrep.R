@@ -341,7 +341,7 @@ buildPlanningGrid <- function(sim) {
     field = "FMU_ID",
     touches = FALSE
   )
-  browser()
+  #browser()
   ## Rasterize CPCAD
   prot_r <- terra::rasterize(
     sim$CPCAD,
