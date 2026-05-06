@@ -252,7 +252,7 @@ buildPlanningGrid <- function(sim) {
   
   sim$PlanningGrid_250m <- terra::init(
     sim$PlanningGrid_250m,
-    fun = function(x) 1
+    fun = function(x) rep(1, length(x))
   )
   study_v <- terra::aggregate(
     study_v
