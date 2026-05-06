@@ -238,10 +238,10 @@ buildPlanningGrid <- function(sim) {
   message("PROJECT/RESAMPLE FINISHED")
   
   # -----------------------------------------------------
-  # 3) FINAL PlanningGrid (from LandCover footprint)
+  # ---------------------------------------------------------
+  # 3) FINAL PlanningGrid
   # ---------------------------------------------------------
   
-
   message("Building PlanningGrid from studyArea")
   
   sim$PlanningGrid_250m <- terra::rast(
@@ -251,17 +251,8 @@ buildPlanningGrid <- function(sim) {
   )
   
   values(sim$PlanningGrid_250m) <- 1
-  study_v <- terra::aggregate(
-    study_v
-  )
-  sim$PlanningGrid_250m <- terra::mask(
-    sim$PlanningGrid_250m,
-    study_v
-  )
   
-  # Now use the REAL PlanningGrid for everything else
   planning <- sim$PlanningGrid_250m
-  
   # ---------------------------------------------------------
   # 4) Align standAge
   # ---------------------------------------------------------
