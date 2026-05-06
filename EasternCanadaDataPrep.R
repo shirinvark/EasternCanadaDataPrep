@@ -250,10 +250,7 @@ buildPlanningGrid <- function(sim) {
     crs = terra::crs(study_v)
   )
   
-  sim$PlanningGrid_250m <- terra::init(
-    sim$PlanningGrid_250m,
-    fun = function(x) rep(1, length(x))
-  )
+  values(sim$PlanningGrid_250m) <- 1
   study_v <- terra::aggregate(
     study_v
   )
