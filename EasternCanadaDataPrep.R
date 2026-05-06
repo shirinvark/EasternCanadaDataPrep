@@ -246,7 +246,7 @@ buildPlanningGrid <- function(sim) {
   # ---------------------------------------------------------
   
   message("Building PlanningGrid from studyArea")
-  
+  #browser()
   sim$PlanningGrid_250m <- terra::rast(
     ext = terra::ext(study_v),
     resolution = 250,
@@ -257,6 +257,8 @@ buildPlanningGrid <- function(sim) {
   # ---------------------------------------------------------
   # 4) Align standAge
   # ---------------------------------------------------------
+  browser()
+  
   if (!is.null(sim$standAgeMap)) {
     
     sa_src <- sim$standAgeMap
