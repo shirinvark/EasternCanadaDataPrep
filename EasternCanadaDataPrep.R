@@ -251,6 +251,8 @@ buildPlanningGrid <- function(sim) {
     resolution = 250,
     crs = terra::crs(study_v)
   )
+  values(sim$PlanningGrid_250m) <- 1
+  
   message("FINISH create PlanningGrid")
   planning <- sim$PlanningGrid_250m
   # ---------------------------------------------------------
