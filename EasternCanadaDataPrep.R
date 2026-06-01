@@ -480,68 +480,79 @@ buildPlanningGrid <- function(sim) {
   # LandCover
   # =========================================================
   
-  if (SpaDES.core::suppliedElsewhere("LandCover"))  {
+  # =========================================================
+  # 2) LandCover
+  # =========================================================
+  
+  if (SpaDES.core::suppliedElsewhere("LandCover_250m", sim)) {
     
-    message("✔ Using LandCover supplied from upstream or user.")
+    message("✔ Using LandCover_250m supplied from upstream or user.")
     
   } else {
+    
+    dPath <- SpaDES.core::dataPath(sim)
     
     lc_dir <- file.path(dPath, "LandCover")
     dir.create(lc_dir, showWarnings = FALSE, recursive = TRUE)
     
-    lc_file <- file.path(lc_dir, "LandCover.tif")
+    lc_file <- file.path(lc_dir, "LandCover_250m.tif")
     
     if (file.exists(lc_file)) {
       
-      message("✔ LandCover found locally. Loading...")
+      message("✔ LandCover_250m found locally. Loading...")
       
-      sim$LandCover <- terra::rast(lc_file)
+      sim$LandCover_250m <- terra::rast(lc_file)
       
     } else {
       
-      message("⬇ LandCover not found locally. Downloading from Drive...")
+      message("⬇ LandCover_250m not found locally. Downloading from Drive...")
       
-      sim$LandCover <- Cache(
+      sim$LandCover_250m <- Cache(
         prepInputs,
         url = "https://drive.google.com/uc?export=download&id=1Gzhd5VnIZ7MqRSRJmNFiGfVUHrKkP9Ag",
         destinationPath = lc_dir,
-        targetFile = "LandCover.tif",
+        targetFile = "LandCover_250m.tif",
         fun = terra::rast,
         overwrite = FALSE
       )
     }
-  }   # ← این براکت خیلی مهم بود
-  
+  }
   
   # =========================================================
-  # StandAgeMap (SCANFI 2020 only)
+  # 3) StandAgeMap (SCANFI 2020 only)
   # =========================================================
   
-  if (SpaDES.core::suppliedElsewhere("standAgeMap")) {
+  if (SpaDES.core::suppliedElsewhere("standAge_250m", sim)) {
     
-    message("✔ Using standAgeMap supplied from upstream or user.")
+    message("✔ Using standAge_250m supplied from upstream or user.")
     
   } else {
     
-    sa_dir  <- file.path(dPath, "StandAge")
+    dPath <- SpaDES.core::dataPath(sim)
+    
+    sa_dir <- file.path(dPath, "StandAge")
     dir.create(sa_dir, showWarnings = FALSE, recursive = TRUE)
     
-    sa_file <- file.path(sa_dir, "SCANFI_att_age_S_2020_v1_1.tif")
+    sa_file <- file.path(
+      sa_dir,
+      "standAge_250m.tif"
+    )
     
     if (file.exists(sa_file)) {
       
-      message("✔ SCANFI standAge found locally. Loading...")
-      sim$standAgeMap <- terra::rast(sa_file)
+      message("✔ standAge_250m found locally. Loading...")
+      
+      sim$standAge_250m <- terra::rast(sa_file)
       
     } else {
       
-      message("⬇ SCANFI not found locally. Downloading from Drive...")
+      message("⬇ standAge_250m not found locally. Downloading from Drive...")
       
-      sim$standAgeMap <- Cache(
+      sim$standAge_250m <- Cache(
         prepInputs,
         url = "https://drive.google.com/uc?export=download&id=1OdZ7Tznk53KceEyt9dFOBOkxDHEX5X0U",
         destinationPath = sa_dir,
-        targetFile = "SCANFI_att_age_S_2020_v1_1.tif",
+        targetFile = "standAge_250m.tif",
         fun = terra::rast,
         overwrite = FALSE
       )
