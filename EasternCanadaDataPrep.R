@@ -174,8 +174,7 @@ buildPlanningGrid <- function(sim) {
   # 2) Align LandCover
   # ---------------------------------------------------------
   
-  lc_src <- sim$LandCover
-  
+  lc_src <- sim$LandCover_250m  
   message("LandCover ncell BEFORE crop: ", terra::ncell(lc_src))
   
   # 1️⃣ crop (safe)
@@ -264,8 +263,7 @@ buildPlanningGrid <- function(sim) {
   
   if (!is.null(sim$standAgeMap)) {
     
-    sa_src <- sim$standAgeMap
-    
+    sa_src <- sim$standAge_250m    
     # ---------------------------------------------
     # crop FIRST in native CRS
     # ---------------------------------------------
