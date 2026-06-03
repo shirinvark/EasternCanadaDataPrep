@@ -83,7 +83,7 @@ defineModule(sim, list(
                  desc = "Land cover raster",
                  sourceURL = NA),
     
-    expectsInput("standAgeMap",
+    expectsInput("standAge_250m",
                  objectClass = "SpatRaster",
                  desc = "Stand age raster",
                  sourceURL = NA)
@@ -263,7 +263,7 @@ buildPlanningGrid <- function(sim) {
   # 4) Align standAge
   # ---------------------------------------------------------
   
-  if (!is.null(sim$standAgeMap)) {
+  if (!is.null(sim$standAge_250m)) {
     
     sa_src <- sim$standAge_250m    
     # ---------------------------------------------
@@ -519,7 +519,7 @@ buildPlanningGrid <- function(sim) {
   }
   
   # =========================================================
-  # 3) StandAgeMap (SCANFI 2020 only)
+  # 3) standAge_250m (SCANFI 2020 only)
   # =========================================================
   
   if (SpaDES.core::suppliedElsewhere("standAge_250m", sim)) {
@@ -530,7 +530,7 @@ buildPlanningGrid <- function(sim) {
     
     dPath <- SpaDES.core::dataPath(sim)
     
-    sa_dir <- file.path(dPath, "StandAge")
+    sa_dir <- file.path(dPath, "standAge_250m")
     dir.create(sa_dir, showWarnings = FALSE, recursive = TRUE)
     
     sa_file <- file.path(

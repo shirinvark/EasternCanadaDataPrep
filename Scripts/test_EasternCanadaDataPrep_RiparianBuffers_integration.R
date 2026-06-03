@@ -31,13 +31,15 @@ sudbury <- sf::st_read(
 )
 
 sudbury <- sf::st_make_valid(sudbury)
-studyArea <- sf::st_transform(studyArea, terra::crs(lc))
+
 ## =========================================================
-## 3) CREATE SMALL TEST PATCH INSIDE SUDBURY (10km x 10km)
+## 3) CREATE SMALL TEST PATCH (5 km x 5 km)
 ## =========================================================
 
-# گرفتن centroid
-cent <- sf::st_centroid(sf::st_union(sudbury))
+cent <- sf::st_centroid(
+  sf::st_union(sudbury)
+)
+
 xy <- sf::st_coordinates(cent)
 
 xmin <- xy[1] - 2500
@@ -45,75 +47,125 @@ xmax <- xy[1] + 2500
 ymin <- xy[2] - 2500
 ymax <- xy[2] + 2500
 
-small_ext <- terra::ext(xmin, xmax, ymin, ymax)
-small_poly <- terra::as.polygons(small_ext, crs = terra::crs(terra::vect(sudbury)))
+small_ext <- terra::ext(
+  xmin, xmax,
+  ymin, ymax
+)
 
-# محدود کردن به داخل Sudbury
+small_poly <- terra::as.polygons(
+  small_ext,
+  crs = terra::crs(
+    terra::vect(sudbury)
+  )
+)
+
 small_poly <- terra::intersect(
   terra::vect(sudbury),
   small_poly
 )
 
 ## =========================================================
-## 4) LOAD LandCover
-## =========================================================
-lc <- terra::rast(
-  "E:/MODULES_TESTS/SCANFI_att_nfiLandCover_CanadaLCCclassCodes_S_2010_v1_1.tif"
-)
-
-## =========================================================
-## 5) DOWNLOAD MODULES
+## 4) DOWNLOAD MODULES
 ## =========================================================
 getModule(
-  modules    = c(
+  modules = c(
     "shirinvark/EasternCanadaDataPrep",
     "shirinvark/RiparianBuffers"
   ),
   modulePath = getPaths()$modulePath,
-  overwrite  = FALSE
+  overwrite = FALSE
 )
 
 ## =========================================================
-## 6) INIT SIM (SMALL PATCH)
+## 5) INIT SIM
 ## =========================================================
 sim <- simInit(
-  times   = list(start = 1, end = 1),
+  
+  times = list(
+    start = 1,
+    end   = 1
+  ),
+  
   modules = c(
     "EasternCanadaDataPrep",
     "RiparianBuffers"
   ),
+  
   objects = list(
-    LandCover = lc,
     studyArea = small_poly
   ),
+  
   params = list(
+    
     EasternCanadaDataPrep = list(
-      devMode = FALSE
+      .useCache = FALSE
     ),
+    
     RiparianBuffers = list(
       hydroRaster_m = 25
     )
   ),
+  
   paths = getPaths()
 )
 
 ## =========================================================
-## 7) RUN
+## 6) RUN
 ## =========================================================
 system.time({
   sim <- spades(sim)
 })
 
 ## =========================================================
-## 8) CHECK
+## 7) CHECKS
 ## =========================================================
-cat("\nPlanningGrid values:\n")
-print(unique(values(sim$PlanningGrid_250m)))
 
-plot(sim$PlanningGrid_250m,
-     main = "Planning Grid – Sudbury small patch")
+cat("\n====================\n")
+cat("PlanningGrid check\n")
+cat("====================\n")
 
-plot(sim$Riparian$riparianFraction,
-     main = "Riparian fraction – Sudbury small patch")
+print(sim$PlanningGrid_250m)
 
-message("✅ Small Sudbury patch: DataPrep + Riparian OK")
+print(
+  unique(
+    values(sim$PlanningGrid_250m)
+  )
+)
+
+print(
+  freq(sim$PlanningGrid_250m)
+)
+
+cat("\n====================\n")
+cat("LandCover check\n")
+cat("====================\n")
+
+print(sim$LandCover_250m)
+
+print(
+  freq(sim$LandCover_250m)
+)
+
+cat("\n====================\n")
+cat("Riparian check\n")
+cat("====================\n")
+
+print(
+  summary(
+    values(
+      sim$Riparian$riparianFraction
+    )
+  )
+)
+
+plot(
+  sim$PlanningGrid_250m,
+  main = "PlanningGrid"
+)
+
+plot(
+  sim$Riparian$riparianFraction,
+  main = "Riparian Fraction"
+)
+
+message("✅ TEST FINISHED")
