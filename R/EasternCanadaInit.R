@@ -23,7 +23,7 @@ EasternCanadaInit <- function(sim) {
   
   stopifnot(
     !is.null(sim$LandCover),
-    !is.null(sim$standAge_250mp)
+    !is.null(sim$standAge_250m)
   )
   
   sim <- buildPlanningGrid(sim)
