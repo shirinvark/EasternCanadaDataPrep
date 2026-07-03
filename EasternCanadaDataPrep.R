@@ -445,20 +445,22 @@ buildPlanningGrid <- function(sim) {
   ## ---------------------------------------------------------
   ## 3) FMU – Forest Management Units
   ## ---------------------------------------------------------
-  if (!SpaDES.core::suppliedElsewhere("FMU")){
+  ## ---------------------------------------------------------
+  ## 3) FMU – Forest Management Units
+  ## ---------------------------------------------------------
+  if (!SpaDES.core::suppliedElsewhere("FMU")) {
     
     fmu_dir <- file.path(dPath, "FMU")
-   # dir.create(fmu_dir, recursive = TRUE, showWarnings = FALSE)
     
     message("▶ Preparing FMU...")
     
     sim$FMU <- Cache(
       prepInputs,
-      url = "https://drive.google.com/uc?export=download&id=1qp4TRgFArANp1YNEoOpeuwLlM-khf4v1",
-      destinationPath = file.path(dPath, "FMU"),#fmu_dir,
-      targetFile = "Forest_Management_Units_CA.gpkg",
+      url = "https://drive.google.com/uc?export=download&id=1jfrgLrpB2nitynfZMS7lk-H7Fmbt0GK-",
+      destinationPath = fmu_dir,
+      targetFile = "Canada_FMU4.shp",
       fun = terra::vect,
-      cropTo    = studyArea_sf,
+      cropTo = studyArea_sf,
       projectTo = studyArea_sf
     )
     
