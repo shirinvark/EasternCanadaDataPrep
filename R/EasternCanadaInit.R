@@ -8,24 +8,22 @@ EasternCanadaInit <- function(sim) {
     !is.null(sim$CPCAD)
   )
   
-  # standalone fallback
-  if (is.null(sim$LandCover) &&
-      !is.null(sim$LandCover_250m)) {
+  if (is.null(sim$rasterToMatch)) {
     
-    sim$LandCover <- sim$LandCover_250m
-  }
-  
-  if (is.null(sim$standAge_250m) &&
-      !is.null(sim$standAge_250m)) {
+    message("No rasterToMatch supplied. Creating default 240 m rasterToMatch.")
     
-    sim$standAge_250m <- sim$standAge_250m
+    study_v <- if (inherits(sim$studyArea, "SpatVector")) {
+      sim$studyArea
+    } else {
+      terra::vect(sim$studyArea)
+    }
+    
+    sim$rasterToMatch <- terra::rast(
+      ext = terra::ext(study_v),
+      resolution = 240,
+      crs = terra::crs(study_v)
+    )
   }
-  
-  stopifnot(
-    !is.null(sim$LandCover),
-    !is.null(sim$standAge_250m)
-  )
-  
   sim <- buildPlanningGrid(sim)
   
   invisible(sim)

@@ -82,8 +82,14 @@ defineModule(sim, list(
                  objectClass = "SpatRaster",
                  desc = "Land cover raster",
                  sourceURL = NA),
+    expectsInput(
+      "rasterToMatch",
+      objectClass = "SpatRaster",
+      desc = "Template raster used to align all spatial layers",
+      sourceURL = NA
+    ),
     
-    expectsInput("standAge_250m",
+    expectsInput("standAge",
                  objectClass = "SpatRaster",
                  desc = "Stand age raster",
                  sourceURL = NA)
@@ -97,9 +103,9 @@ defineModule(sim, list(
       desc = "Legal and administrative spatial constraints derived from FMUs and protected areas."
     ),
     createsOutput(
-      objectName = "PlanningGrid_250m",
+      objectName = "PlanningGrid",
       objectClass = "SpatRaster",
-      desc = "PlanningGrid_250m used for landbase accounting and downstream AAC calculations."
+      desc = "PlanningGrid used for landbase accounting and downstream AAC calculations."
     )
     
 )))
@@ -115,7 +121,7 @@ doEvent.EasternCanadaDataPrep <- function(sim, eventTime, eventType) {
   invisible(sim)
 }
 
-## Build the PlanningGrid_250m and core landbase components.
+## Build the PlanningGrid and core landbase components.
 ## This function establishes the spatial analysis grid and
 ## derives legal/managerial constraints (FMUs, protected areas).
 ##
@@ -145,6 +151,7 @@ doEvent.EasternCanadaDataPrep <- function(sim, eventTime, eventType) {
 ## (e.g., province-based riparian policies in EasternCanadaHydrology).
 ## This module does not apply or interpret those policies.
 #browser()
+
 buildPlanningGrid <- function(sim) {
  # browser()
   
@@ -156,13 +163,13 @@ buildPlanningGrid <- function(sim) {
     study_v <- terra::vect(sim$studyArea)
   }
   
+  targetRes <- terra::res(sim$rasterToMatch)[1]
   ext <- terra::ext(study_v)
   
   width  <- ext[2] - ext[1]
   height <- ext[4] - ext[3]
-  
-  ncol <- width / 250
-  nrow <- height / 250
+  ncol <- width / targetRes
+  nrow <- height / targetRes
   
   message("Estimated columns: ", round(ncol))
   message("Estimated rows: ", round(nrow))
@@ -174,7 +181,7 @@ buildPlanningGrid <- function(sim) {
   # 2) Align LandCover
   # ---------------------------------------------------------
   
-  lc_src <- sim$LandCover_250m  
+  lc_src <- sim$LandCover  
   message("LandCover ncell BEFORE crop: ", terra::ncell(lc_src))
   
   # 1️⃣ crop (safe)
@@ -200,18 +207,14 @@ buildPlanningGrid <- function(sim) {
   }
   
   # 2️⃣ project to analysis CRS
-  planning_template <- terra::rast(
-    terra::ext(study_v),
-    resolution = 250,
-    crs = terra::crs(study_v)
-  )  
+  planning_template <- sim$rasterToMatch 
   message("STARTING PROJECT/RESAMPLE")
   message("STARTING PRE-AGGREGATION")
   
 
   res_lc <- terra::res(lc_src)[1]
   
-  fact <- floor(250 / res_lc)
+  fact <- floor(targetRes / res_lc)
   
   if (is.na(fact) || fact < 1) {
     fact <- 1
@@ -229,7 +232,7 @@ buildPlanningGrid <- function(sim) {
   }
   
   message("PRE-AGGREGATION FINISHED")
-  sim$LandCover_250m <- terra::project(
+  sim$LandCover <- terra::project(
     lc_src,
     planning_template,
     method = "near",
@@ -245,27 +248,18 @@ buildPlanningGrid <- function(sim) {
   # ---------------------------------------------------------
   
   message("Building PlanningGrid from studyArea")
-  #browser()
-  sim$PlanningGrid_250m <- terra::rast(
-    ext = terra::ext(study_v),
-    resolution = 250,
-    crs = terra::crs(study_v)
-  )
-  values(sim$PlanningGrid_250m) <- 1
+  sim$PlanningGrid <- sim$rasterToMatch
   
-  message("FINISH create PlanningGrid")
-  planning <- sim$PlanningGrid_250m
+  terra::values(sim$PlanningGrid) <- 1
+  
+  planning <- sim$PlanningGrid
   # ---------------------------------------------------------
   # 4) Align standAge
   # ---------------------------------------------------------
   
-  # ---------------------------------------------------------
-  # 4) Align standAge
-  # ---------------------------------------------------------
-  
-  if (!is.null(sim$standAge_250m)) {
+  if (!is.null(sim$standAge)) {
     
-    sa_src <- sim$standAge_250m    
+    sa_src <- sim$standAge    
     # ---------------------------------------------
     # crop FIRST in native CRS
     # ---------------------------------------------
@@ -294,8 +288,7 @@ buildPlanningGrid <- function(sim) {
     # ---------------------------------------------
     
     res_sa <- terra::res(sa_src)[1]
-    
-    fact_sa <- round(250 / res_sa)    
+    fact_sa <- round(targetRes / res_sa)
     if (is.na(fact_sa) || fact_sa < 1) {
       fact_sa <- 1
     }
@@ -320,7 +313,7 @@ buildPlanningGrid <- function(sim) {
       terra::crs(planning),
       method = "near"
     )
-    sim$standAge_250m <- terra::resample(
+    sim$standAge <- terra::resample(
       sa_src,
       planning,
       method = "near"
@@ -351,16 +344,16 @@ buildPlanningGrid <- function(sim) {
   )
   
   ## Legal mask
-  LegalHarvestMask_250m <- terra::ifel(
+  LegalHarvestMask <- terra::ifel(
     !is.na(fmu_r) & prot_r == 0,
     1,
     0
   )
   
   sim$LegalConstraints <- list(
-    FMU_Raster_250m = fmu_r,
-    CPCAD_Raster_250m = prot_r,
-    LegalHarvestMask_250m = LegalHarvestMask_250m
+    FMU_Raster = fmu_r,
+    CPCAD_Raster = prot_r,
+    LegalHarvestMask = LegalHarvestMask
   )
   
   return(invisible(sim))
@@ -475,18 +468,13 @@ buildPlanningGrid <- function(sim) {
     sim$FMU <- terra::project(sim$FMU, studyArea_v)
   }
   
-  
-  # =========================================================
-  # LandCover
-  # =========================================================
-  
   # =========================================================
   # 2) LandCover
   # =========================================================
   
-  if (SpaDES.core::suppliedElsewhere("LandCover_250m", sim)) {
+  if (SpaDES.core::suppliedElsewhere("LandCover", sim)) {
     
-    message("✔ Using LandCover_250m supplied from upstream or user.")
+    message("✔ Using LandCover supplied from upstream or user.")
     
   } else {
     
@@ -495,23 +483,23 @@ buildPlanningGrid <- function(sim) {
     lc_dir <- file.path(dPath, "LandCover")
     dir.create(lc_dir, showWarnings = FALSE, recursive = TRUE)
     
-    lc_file <- file.path(lc_dir, "LandCover_250m.tif")
+    lc_file <- file.path(lc_dir, "LandCover.tif")
     
     if (file.exists(lc_file)) {
       
-      message("✔ LandCover_250m found locally. Loading...")
+      message("✔ LandCover found locally. Loading...")
       
-      sim$LandCover_250m <- terra::rast(lc_file)
+      sim$LandCover <- terra::rast(lc_file)
       
     } else {
       
-      message("⬇ LandCover_250m not found locally. Downloading from Drive...")
+      message("⬇ LandCover not found locally. Downloading from Drive...")
       
-      sim$LandCover_250m <- Cache(
+      sim$LandCover <- Cache(
         prepInputs,
         url = "https://drive.google.com/uc?export=download&id=1Gzhd5VnIZ7MqRSRJmNFiGfVUHrKkP9Ag",
         destinationPath = lc_dir,
-        targetFile = "LandCover_250m.tif",
+        targetFile = "LandCover.tif",
         fun = terra::rast,
         overwrite = FALSE
       )
@@ -519,40 +507,40 @@ buildPlanningGrid <- function(sim) {
   }
   
   # =========================================================
-  # 3) standAge_250m (SCANFI 2020 only)
+  # 3) standAge (SCANFI 2020 only)
   # =========================================================
   
-  if (SpaDES.core::suppliedElsewhere("standAge_250m", sim)) {
+  if (SpaDES.core::suppliedElsewhere("standAge", sim)) {
     
-    message("✔ Using standAge_250m supplied from upstream or user.")
+    message("✔ Using standAge supplied from upstream or user.")
     
   } else {
     
     dPath <- SpaDES.core::dataPath(sim)
     
-    sa_dir <- file.path(dPath, "standAge_250m")
+    sa_dir <- file.path(dPath, "standAge")
     dir.create(sa_dir, showWarnings = FALSE, recursive = TRUE)
     
     sa_file <- file.path(
       sa_dir,
-      "standAge_250m.tif"
+      "standAge.tif"
     )
     
     if (file.exists(sa_file)) {
       
-      message("✔ standAge_250m found locally. Loading...")
+      message("✔ standAge found locally. Loading...")
       
-      sim$standAge_250m <- terra::rast(sa_file)
+      sim$standAge <- terra::rast(sa_file)
       
     } else {
       
-      message("⬇ standAge_250m not found locally. Downloading from Drive...")
+      message("⬇ standAge not found locally. Downloading from Drive...")
       
-      sim$standAge_250m <- Cache(
+      sim$standAge <- Cache(
         prepInputs,
         url = "https://drive.google.com/uc?export=download&id=1OdZ7Tznk53KceEyt9dFOBOkxDHEX5X0U",
         destinationPath = sa_dir,
-        targetFile = "standAge_250m.tif",
+        targetFile = "standAge.tif",
         fun = terra::rast,
         overwrite = FALSE
       )
