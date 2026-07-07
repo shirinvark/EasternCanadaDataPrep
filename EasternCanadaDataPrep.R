@@ -509,7 +509,8 @@ buildPlanningGrid <- function(sim) {
   }
   
   # =========================================================
-  # 3) standAge (SCANFI 2020 only)
+  # =========================================================
+  # 3) standAge (optional)
   # =========================================================
   
   if (SpaDES.core::suppliedElsewhere("standAge", sim)) {
@@ -536,16 +537,9 @@ buildPlanningGrid <- function(sim) {
       
     } else {
       
-      message("⬇ standAge not found locally. Downloading from Drive...")
+      message("ℹ No standAge available. Continuing without standAge.")
       
-      sim$standAge <- Cache(
-        prepInputs,
-        url = "https://drive.google.com/uc?export=download&id=1OdZ7Tznk53KceEyt9dFOBOkxDHEX5X0U",
-        destinationPath = sa_dir,
-        targetFile = "standAge.tif",
-        fun = terra::rast,
-        overwrite = FALSE
-      )
+      sim$standAge <- NULL
     }
   }
   
