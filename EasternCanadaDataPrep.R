@@ -77,6 +77,18 @@ defineModule(sim, list(
                  objectClass = c("sf", "SpatVector"),
                  desc = "Forest Management Units",
                  sourceURL = NA),
+    expectsInput(
+      "BCR",
+      objectClass = c("sf", "SpatVector"),
+      desc = "Bird Conservation Regions",
+      sourceURL = NA
+    ),
+    expectsInput(
+      "Ownership",
+      objectClass = "SpatRaster",
+      desc = "National ownership raster",
+      sourceURL = NA
+    ),
     
     expectsInput("LandCover",
                  objectClass = "SpatRaster",
@@ -87,6 +99,11 @@ defineModule(sim, list(
       objectClass = "SpatRaster",
       desc = "Template raster used to align all spatial layers",
       sourceURL = NA
+    ),
+    expectsInput(
+      "Jurisdiction",
+      objectClass = c("sf", "SpatVector"),
+      desc = "Province / State polygons"
     ),
     
     expectsInput("standAge",
@@ -121,243 +138,6 @@ doEvent.EasternCanadaDataPrep <- function(sim, eventTime, eventType) {
   invisible(sim)
 }
 
-## Build the PlanningGrid and core landbase components.
-## This function establishes the spatial analysis grid and
-## derives legal/managerial constraints (FMUs, protected areas).
-##
-## Importantly:
-## - No ecological interpretation is performed here
-## - No harvest or policy decisions are applied
-## - Outputs are intended for reuse by multiple downstream modules
-
-
-## Build provincial boundaries for the study area.
-##
-## This function exists to provide a clean, explicit
-## jurisdictional layer for downstream modules.
-##
-## Provincial boundaries are NOT used here for decisions,
-## but allow other modules (e.g., hydrology, landbase policy)
-## to apply province-specific rules in a transparent way.
-
-
-###########################
-## NOTE:
-## This module is responsible for preparing spatial inputs only.
-## No policy interpretation or landbase decisions are made here.
-##
-## The Provinces object is produced solely to enable
-## jurisdiction-aware processing in downstream modules
-## (e.g., province-based riparian policies in EasternCanadaHydrology).
-## This module does not apply or interpret those policies.
-#browser()
-
-buildPlanningGrid <- function(sim) {
- # browser()
-  
-  message("🔵 Building PlanningGrid and aligning layers...")
-  
-  if (inherits(sim$studyArea, "SpatVector")) {
-    study_v <- sim$studyArea
-  } else {
-    study_v <- terra::vect(sim$studyArea)
-  }
-  
-  targetRes <- terra::res(sim$rasterToMatch)[1]
-  ext <- terra::ext(study_v)
-  
-  width  <- ext[2] - ext[1]
-  height <- ext[4] - ext[3]
-  ncol <- width / targetRes
-  nrow <- height / targetRes
-  
-  message("Estimated columns: ", round(ncol))
-  message("Estimated rows: ", round(nrow))
-  message("Estimated total cells: ", round(ncol * nrow))
-  # ---------------------------------------------------------
- 
-  
-  # ---------------------------------------------------------
-  # 2) Align LandCover
-  # ---------------------------------------------------------
-  
-  lc_src <- sim$LandCover  
-  message("LandCover ncell BEFORE crop: ", terra::ncell(lc_src))
-  
-  # 1️⃣ crop (safe)
-  if (!terra::same.crs(study_v, lc_src)) {
-    study_v_original_crs <- terra::project(study_v, terra::crs(lc_src))
-  } else {
-    study_v_original_crs <- study_v
-  }
-  
-  message("STARTING EXTENT CROP")
-  
-  lc_src <- terra::crop(
-    lc_src,
-    terra::ext(study_v_original_crs),
-    snap = "out"
-  )
-  
-  message("EXTENT CROP FINISHED")
-  
-   
-  if (is.null(lc_src) || terra::ncell(lc_src) == 0) {
-    stop("❌ Crop produced empty raster.")
-  }
-  
-  # 2️⃣ project to analysis CRS
-  planning_template <- sim$rasterToMatch 
-  message("STARTING PROJECT/RESAMPLE")
-  message("STARTING PRE-AGGREGATION")
-  
-
-  res_lc <- terra::res(lc_src)[1]
-  
-  fact <- floor(targetRes / res_lc)
-  
-  if (is.na(fact) || fact < 1) {
-    fact <- 1
-  }  
-
-  if (fact > 1) {
-    
-    lc_src <- terra::aggregate(
-      lc_src,
-      fact = fact,
-      fun = terra::modal,
-      na.rm = TRUE
-    )
-    
-  }
-  
-  message("PRE-AGGREGATION FINISHED")
-  sim$LandCover <- terra::project(
-    lc_src,
-    planning_template,
-    method = "near",
-    mask = TRUE
-  )
-  
-  message("PROJECT/RESAMPLE FINISHED")
-  #browser()
-  
-  # -----------------------------------------------------
-  # ---------------------------------------------------------
-  # 3) FINAL PlanningGrid
-  # ---------------------------------------------------------
-  
-  message("Building PlanningGrid from studyArea")
-  sim$PlanningGrid <- sim$rasterToMatch
-  
-  terra::values(sim$PlanningGrid) <- 1
-  
-  planning <- sim$PlanningGrid
-  # ---------------------------------------------------------
-  # 4) Align standAge
-  # ---------------------------------------------------------
-  
-  if (!is.null(sim$standAge)) {
-    
-    sa_src <- sim$standAge    
-    # ---------------------------------------------
-    # crop FIRST in native CRS
-    # ---------------------------------------------
-    
-    if (!terra::same.crs(study_v, sa_src)) {
-      
-      study_v_sa <- terra::project(
-        study_v,
-        terra::crs(sa_src)
-      )
-      
-    } else {
-      
-      study_v_sa <- study_v
-      
-    }
-    
-    sa_src <- terra::crop(
-      sa_src,
-      terra::ext(study_v_sa),
-      snap = "out"
-    )
-    
-    # ---------------------------------------------
-    # aggregate BEFORE project
-    # ---------------------------------------------
-    
-    res_sa <- terra::res(sa_src)[1]
-    fact_sa <- round(targetRes / res_sa)
-    if (is.na(fact_sa) || fact_sa < 1) {
-      fact_sa <- 1
-    }
-    
-    if (fact_sa > 1) {
-      
-      sa_src <- terra::aggregate(
-        sa_src,
-        fact = fact_sa,
-        fun = terra::modal,
-        na.rm = TRUE
-      )
-      
-    }
-    
-    # ---------------------------------------------
-    # project AFTER crop + aggregate
-    # ---------------------------------------------
-    
-    sa_src <- terra::project(
-      sa_src,
-      terra::crs(planning),
-      method = "near"
-    )
-    sim$standAge <- terra::resample(
-      sa_src,
-      planning,
-      method = "near"
-    )
-  }
-  # ---------------------------------------------------------
-  # 5) Rasterize FMU & CPCAD
-  # ---------------------------------------------------------
-  
-  ## Rasterize FMU
-  if (!"FMU_ID" %in% names(sim$FMU)) {
-    sim$FMU$FMU_ID <- seq_len(nrow(sim$FMU))
-  }
-  #browser()
-  fmu_r <- terra::rasterize(
-    sim$FMU,
-    planning,
-    field = "FMU_ID",
-    touches = FALSE
-  )
-  #browser()
-  ## Rasterize CPCAD
-  prot_r <- terra::rasterize(
-    sim$CPCAD,
-    planning,
-    field = 1,
-    background = 0
-  )
-  
-  ## Legal mask
-  LegalHarvestMask <- terra::ifel(
-    !is.na(fmu_r) & prot_r == 0,
-    1,
-    0
-  )
-  
-  sim$LegalConstraints <- list(
-    FMU_Raster = fmu_r,
-    CPCAD_Raster = prot_r,
-    LegalHarvestMask = LegalHarvestMask
-  )
-  
-  return(invisible(sim))
-}
 
 .inputObjects <- function(sim) {
   
@@ -396,7 +176,7 @@ buildPlanningGrid <- function(sim) {
   } else {
     studyArea_v <- terra::vect(studyArea_sf)
   }  ## ---------------------------------------------------------
- 
+  
   ## ---------------------------------------------------------
   
   ## ---------------------------------------------------------
@@ -405,7 +185,7 @@ buildPlanningGrid <- function(sim) {
   if (!SpaDES.core::suppliedElsewhere("CPCAD")){
     
     cpcad_dir <- file.path(dPath, "CPCAD")
-   # dir.create(cpcad_dir, recursive = TRUE, showWarnings = FALSE)
+    # dir.create(cpcad_dir, recursive = TRUE, showWarnings = FALSE)
     
     message("▶ Preparing CPCAD...")
     
@@ -442,9 +222,7 @@ buildPlanningGrid <- function(sim) {
   
   message("✔ CPCAD ready. Features: ", nrow(sim$CPCAD))
   
-  ## ---------------------------------------------------------
-  ## 3) FMU – Forest Management Units
-  ## ---------------------------------------------------------
+  
   ## ---------------------------------------------------------
   ## 3) FMU – Forest Management Units
   ## ---------------------------------------------------------
@@ -469,7 +247,111 @@ buildPlanningGrid <- function(sim) {
   if (!terra::same.crs(sim$FMU, studyArea_v)) {
     sim$FMU <- terra::project(sim$FMU, studyArea_v)
   }
+  ## ---------------------------------------------------------
+  ## 4) BCR – Bird Conservation Regions
+  ## ---------------------------------------------------------
   
+  if (!SpaDES.core::suppliedElsewhere("BCR")) {
+    
+    message("▶ Preparing BCR...")
+    
+    bcr_dir <- file.path(dPath, "BCR")
+    
+    ## اگر قبلاً extract شده باشد
+    gdb <- list.dirs(
+      bcr_dir,
+      recursive = FALSE,
+      full.names = TRUE
+    )
+    gdb <- gdb[grepl("\\.gdb$", gdb)]
+    
+    ## اگر هنوز وجود ندارد، دانلود و extract
+    if (length(gdb) == 0) {
+      
+      prepInputs(
+        url = "https://drive.google.com/uc?export=download&id=18pnd5-qDDwTmgHN2NxyU_VyBP3tk9R97",
+        destinationPath = bcr_dir,
+        fun = NA,
+        verbose = 1
+      )
+      
+      gdb <- list.dirs(
+        bcr_dir,
+        recursive = FALSE,
+        full.names = TRUE
+      )
+      gdb <- gdb[grepl("\\.gdb$", gdb)]
+    }
+    
+    stopifnot(length(gdb) == 1)
+    
+    sim$BCR <- terra::vect(
+      gdb,
+      layer = "BCR_Terrestrial_Master"
+    )
+    
+    sim$BCR <- terra::crop(sim$BCR, studyArea_sf)
+    sim$BCR <- terra::project(sim$BCR, terra::crs(studyArea_sf))
+  }
+  ## ---------------------------------------------------------
+  ## 5) Jurisdiction – Administrative boundaries
+  ## ---------------------------------------------------------
+  
+  if (!SpaDES.core::suppliedElsewhere("Jurisdiction")) {
+    
+    message("▶ Preparing Jurisdiction...")
+    
+    sim$Jurisdiction <- Cache(
+      prepInputs,
+      url = "https://drive.google.com/uc?export=download&id=1rJQCUJXN3m0pGBGo-bmf4qDfiZbCAg1p",
+      destinationPath = file.path(dPath, "Jurisdiction"),
+      targetFile = file.path(
+        "politicalboundaries_shapefile",
+        "NA_PoliticalDivisions",
+        "data",
+        "boundaries_p_2021_v3.shp"
+      ),
+      fun = terra::vect,
+      cropTo = studyArea_sf,
+      projectTo = studyArea_sf
+    )
+    
+  }
+  
+  message("✔ Jurisdiction ready. Features: ", nrow(sim$Jurisdiction))
+  
+  ## ---------------------------------------------------------
+  ## 6) Ownership – National ownership layer
+  ## ---------------------------------------------------------
+  
+  if (!SpaDES.core::suppliedElsewhere("Ownership")) {
+    
+    message("▶ Preparing Ownership...")
+    
+    ownership_dir <- file.path(dPath, "Ownership")
+    
+    sim$Ownership <- Cache(
+      prepInputs,
+      url = "https://drive.google.com/uc?export=download&id=1dntQglGsEm6cpJSsPAmwtiPYQxZuNX-D",
+      destinationPath = ownership_dir,
+      targetFile = "Ownership.tif",
+      fun = terra::rast,
+      cropTo = studyArea_sf,
+      projectTo = studyArea_sf
+    )
+    
+  }
+  
+  if (!terra::same.crs(sim$Ownership, studyArea_v)) {
+    
+    sim$Ownership <- terra::project(
+      sim$Ownership,
+      studyArea_v
+    )
+    
+  }
+  
+  message("✔ Ownership ready.")
   # =========================================================
   # 2) LandCover
   # =========================================================
