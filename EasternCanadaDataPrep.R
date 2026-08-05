@@ -89,6 +89,17 @@ defineModule(sim, list(
       desc = "National ownership raster",
       sourceURL = NA
     ),
+    expectsInput(
+      "YCF_ON",
+      objectClass = c("sf", "SpatVector"),
+      desc = "Ontario Yield Curve Family polygons"
+    ),
+    
+    expectsInput(
+      "YCF_NL",
+      objectClass = c("sf", "SpatVector"),
+      desc = "Newfoundland Yield Curve Family polygons"
+    ),
     
     expectsInput("LandCover",
                  objectClass = "SpatRaster",
@@ -350,6 +361,37 @@ doEvent.EasternCanadaDataPrep <- function(sim, eventTime, eventType) {
   }
   
   message("✔ Ownership ready.")
+  ## ---------------------------------------------------------
+  ## 7) Yield Curve Family
+  ## ---------------------------------------------------------
+  
+  if (!SpaDES.core::suppliedElsewhere("YCF_ON")) {
+    
+    message("▶ Preparing Ontario Yield Curve Family...")
+    
+    sim$YCF_ON <- Cache(
+      prepInputs,
+      url = "https://raw.githubusercontent.com/shirinvark/EasternCanadaDataPrep/main/data/ON/YCF/combined_regions.zip",
+      destinationPath = file.path(dPath, "ON"),
+      targetFile = "combined_regions.shp",
+      fun = terra::vect
+    )
+    
+  }
+  
+  if (!SpaDES.core::suppliedElsewhere("YCF_NL")) {
+    
+    message("▶ Preparing Newfoundland Yield Curve Family...")
+    
+    sim$YCF_NL <- Cache(
+      prepInputs,
+      url = "https://raw.githubusercontent.com/shirinvark/EasternCanadaDataPrep/main/data/NL/YCF/NL_YCF.zip",
+      destinationPath = file.path(dPath, "NL"),
+      targetFile = "NL_YCF.shp",
+      fun = terra::vect
+    )
+    
+  }
   # =========================================================
   # 2) LandCover
   # =========================================================

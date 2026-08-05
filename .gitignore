@@ -27,3 +27,15 @@ EasternCanadaDataPrep/
 .Rhistory
 .RData
 .positai
+# Temporary scripts
+2module forNL.R
+NL_FMU_DEBUG.R
+test for Nl.R
+
+# Ownership raster sidecar files
+*.aux.xml
+*.lyr
+*.ovr
+*.vat.cpg
+**/AGREEFOR_SHP/
+**/LIO-2025-12-11/

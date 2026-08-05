@@ -62,11 +62,11 @@ unlink(
 ## =========================================================
 ## 5) GET MODULE
 ## =========================================================
-# #getModule(
-#   modules    = "shirinvark/EasternCanadaDataPrep",
-#   modulePath = getPaths()$modulePath,
-#   overwrite  = TRUE
-# )
+getModule(
+  modules    = "shirinvark/EasternCanadaDataPrep",
+  modulePath = getPaths()$modulePath,
+  overwrite  = TRUE
+)
 
 ## =========================================================
 ## 6) INIT SIM

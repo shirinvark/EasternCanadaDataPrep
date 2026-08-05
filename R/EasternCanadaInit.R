@@ -26,6 +26,7 @@ EasternCanadaInit <- function(sim) {
   }
   sim <- buildPlanningGrid(sim)
   sim <- buildJurisdiction(sim)
+  sim <- buildYieldCurveFamily(sim)
   sim <- buildOwnership(sim)
   sim <- buildBCR(sim)
   
