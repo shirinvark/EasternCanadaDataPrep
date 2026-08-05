@@ -208,11 +208,9 @@ doEvent.EasternCanadaDataPrep <- function(sim, eventTime, eventType) {
   if ("STATUS" %in% names(cpcad))
     cpcad <- cpcad[cpcad$STATUS %in% c(1, 2), ]
   
-  if ("PA_OECM_DF" %in% names(cpcad))
-    cpcad <- cpcad[cpcad$PA_OECM_DF %in% c(1, 2, 3), ]
   
   if ("IUCN_CAT" %in% names(cpcad))
-    cpcad <- cpcad[cpcad$IUCN_CAT %in% 1:7, ]
+    cpcad <- cpcad[cpcad$IUCN_CAT %in% c(1, 2, 3, 4, 5, 6), ]
   
   sim$CPCAD <- cpcad
   
