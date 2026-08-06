@@ -3,6 +3,13 @@
 .RData
 .Ruserdata
 data/**
+!data/
+!data/ON/
+!data/ON/YCF/
+!data/ON/YCF/combined_regions.zip
+!data/NL/
+!data/NL/YCF/
+!data/NL/YCF/NL_YCF.zip
 *.gpkg
 *.tif
 *.zip
