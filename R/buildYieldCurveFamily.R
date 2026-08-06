@@ -9,17 +9,33 @@ buildYieldCurveFamily <- function(sim) {
   
   message("Building Yield Curve Family raster...")
   
-  ycfList <- list(
-    ON = buildYCF_ON(sim),
-    NL = buildYCF_NL(sim)
-  )
+  on <- buildYCF_ON(sim)
+  nl <- buildYCF_NL(sim)
+  
+  ycfList <- list()
+  
+  if (nrow(on) > 0) {
+    ycfList$ON <- on
+  }
+  
+  if (nrow(nl) > 0) {
+    ycfList$NL <- nl
+  }
   
   stopifnot(length(ycfList) > 0)
-  
-  ycf <- do.call(
-    terra::rbind,
-    ycfList
-  )
+  length(ycfList)
+  if (length(ycfList) == 1) {
+    
+    ycf <- ycfList[[1]]
+    
+  } else {
+    
+    ycf <- do.call(
+      rbind,
+      ycfList
+    )
+    
+  }
   
   ycf$ID <- seq_len(nrow(ycf))
   

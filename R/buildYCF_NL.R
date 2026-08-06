@@ -18,6 +18,18 @@ buildYCF_NL <- function(sim) {
     terra::ext(sim$PlanningGrid)
   )
   
+  if (nrow(ycf) == 0) {
+    return(ycf)
+  }
+  
+  ycf$Province <- "NL"
+  
+  ycf <- ycf[, c("Province", "YCF")]
+  
+  ycf
+  message("NL features before crop: ", nrow(sim$YCF_NL))
+  
+  message("NL features after crop: ", nrow(ycf))
   ycf$Province <- "NL"
   
   ycf <- ycf[, c("Province", "YCF")]
