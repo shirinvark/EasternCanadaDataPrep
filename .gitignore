@@ -6,6 +6,9 @@ data/**
 *.gpkg
 *.tif
 *.zip
+
+!data/ON/YCF/combined_regions.zip
+!data/NL/YCF/NL_YCF.zip
 *.shp
 *.dbf
 *.prj
