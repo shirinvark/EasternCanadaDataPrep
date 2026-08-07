@@ -17,7 +17,16 @@ buildBCR <- function(sim) {
   
   planning <- sim$PlanningGrid
   bcr <- sim$BCR
+  #------------------------------------------------------------
+  # Match CRS to PlanningGrid
+  #------------------------------------------------------------
   
+  if (!terra::same.crs(bcr, planning)) {
+    bcr <- terra::project(
+      bcr,
+      terra::crs(planning)
+    )
+  }
   #------------------------------------------------------------
   # Ensure each BCR has a unique numeric identifier
   #------------------------------------------------------------

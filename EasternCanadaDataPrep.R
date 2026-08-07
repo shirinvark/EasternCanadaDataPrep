@@ -131,6 +131,16 @@ defineModule(sim, list(
       desc = "Legal and administrative spatial constraints derived from FMUs and protected areas."
     ),
     createsOutput(
+      objectName  = "jurisdictionMap",
+      objectClass = "SpatRaster",
+      desc        = "Rasterized provincial/territorial jurisdiction aligned to PlanningGrid."
+    ),
+    createsOutput(
+      objectName  = "jurisdictionLookup",
+      objectClass = c("data.table", "data.frame"),
+      desc        = "Lookup table linking jurisdiction raster IDs to jurisdiction names."
+    ),
+    createsOutput(
       objectName = "PlanningGrid",
       objectClass = "SpatRaster",
       desc = "PlanningGrid used for landbase accounting and downstream AAC calculations."
