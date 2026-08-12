@@ -106,107 +106,117 @@ buildPlanningGrid <- function(sim) {
   
   planning <- sim$PlanningGrid
   # ---------------------------------------------------------
-  # 4) Align standAge
+  # Rasterize Sustained Yield Units (SYU)
   # ---------------------------------------------------------
   
-  if (!is.null(sim$standAge)) {
-    
-    sa_src <- sim$standAge    
-    # ---------------------------------------------
-    # crop FIRST in native CRS
-    # ---------------------------------------------
-    
-    if (!terra::same.crs(study_v, sa_src)) {
-      
-      study_v_sa <- terra::project(
-        study_v,
-        terra::crs(sa_src)
-      )
-      
-    } else {
-      
-      study_v_sa <- study_v
-      
-    }
-    
-    sa_src <- terra::crop(
-      sa_src,
-      terra::ext(study_v_sa),
-      snap = "out"
-    )
-    
-    # ---------------------------------------------
-    # aggregate BEFORE project
-    # ---------------------------------------------
-    
-    res_sa <- terra::res(sa_src)[1]
-    fact_sa <- round(targetRes / res_sa)
-    if (is.na(fact_sa) || fact_sa < 1) {
-      fact_sa <- 1
-    }
-    
-    if (fact_sa > 1) {
-      
-      sa_src <- terra::aggregate(
-        sa_src,
-        fact = fact_sa,
-        fun = terra::modal,
-        na.rm = TRUE
-      )
-      
-    }
-    
-    # ---------------------------------------------
-    # project AFTER crop + aggregate
-    # ---------------------------------------------
-    
-    sa_src <- terra::project(
-      sa_src,
-      terra::crs(planning),
-      method = "near"
-    )
-    sim$standAge <- terra::resample(
-      sa_src,
-      planning,
-      method = "near"
-    )
-  }
-  # ---------------------------------------------------------
-  # 5) Rasterize FMU & CPCAD
-  # ---------------------------------------------------------
+  message("Building SYU raster...")
   
-  ## Rasterize FMU
-  if (!"FMU_ID" %in% names(sim$FMU)) {
-    sim$FMU$FMU_ID <- seq_len(nrow(sim$FMU))
+  if (!"SYU_ID" %in% names(sim$SYU)) {
+    sim$SYU$SYU_ID <- seq_len(nrow(sim$SYU))
   }
-  #browser()
-  fmu_r <- terra::rasterize(
-    sim$FMU,
+  
+  if (!"SYU_NAME" %in% names(sim$SYU)) {
+    sim$SYU$SYU_NAME <- paste0(
+      "SYU_",
+      sim$SYU$SYU_ID
+    )
+  }
+  
+  if (!terra::same.crs(sim$SYU, planning)) {
+    sim$SYU <- terra::project(
+      sim$SYU,
+      terra::crs(planning)
+    )
+  }
+  
+  SYU_polygons <- sim$SYU
+  
+  sim$SYU <- terra::rasterize(
+    SYU_polygons,
     planning,
-    field = "FMU_ID",
+    field = "SYU_ID",
     touches = FALSE
   )
-  #browser()
-  ## Rasterize CPCAD
-  prot_r <- terra::rasterize(
-    sim$CPCAD,
-    planning,
-    field = 1,
-    background = 0
+  
+  names(sim$SYU) <- "SYU"
+  
+  sim$SYULookup <- data.frame(
+    SYU_ID = SYU_polygons$SYU_ID,
+    SYU_NAME = SYU_polygons$SYU_NAME,
+    stringsAsFactors = FALSE
   )
   
-  ## Legal mask
-  LegalHarvestMask <- terra::ifel(
-    !is.na(fmu_r) & prot_r == 0,
-    1,
-    0
+  message(
+    "✔ SYU raster created. Number of SYUs: ",
+    nrow(sim$SYULookup)
   )
-  
-  sim$LegalConstraints <- list(
-    FMU_Raster = fmu_r,
-    CPCAD_Raster = prot_r,
-    LegalHarvestMask = LegalHarvestMask
-  )
+  # ---------------------------------------------------------
+  # 4) Align standAge
+  # ---------------------------------------------------------
+  # 
+  # if (!is.null(sim$standAge)) {
+  #   
+  #   sa_src <- sim$standAge    
+  #   # ---------------------------------------------
+  #   # crop FIRST in native CRS
+  #   # ---------------------------------------------
+  #   
+  #   if (!terra::same.crs(study_v, sa_src)) {
+  #     
+  #     study_v_sa <- terra::project(
+  #       study_v,
+  #       terra::crs(sa_src)
+  #     )
+  #     
+  #   } else {
+  #     
+  #     study_v_sa <- study_v
+  #     
+  #   }
+  #   
+  #   sa_src <- terra::crop(
+  #     sa_src,
+  #     terra::ext(study_v_sa),
+  #     snap = "out"
+  #   )
+  #   
+  #   # ---------------------------------------------
+  #   # aggregate BEFORE project
+  #   # ---------------------------------------------
+  #   
+  #   res_sa <- terra::res(sa_src)[1]
+  #   fact_sa <- round(targetRes / res_sa)
+  #   if (is.na(fact_sa) || fact_sa < 1) {
+  #     fact_sa <- 1
+  #   }
+  #   
+  #   if (fact_sa > 1) {
+  #     
+  #     sa_src <- terra::aggregate(
+  #       sa_src,
+  #       fact = fact_sa,
+  #       fun = terra::modal,
+  #       na.rm = TRUE
+  #     )
+  #     
+  #   }
+  #   
+  #   # ---------------------------------------------
+  #   # project AFTER crop + aggregate
+  #   # ---------------------------------------------
+  #   
+  #   sa_src <- terra::project(
+  #     sa_src,
+  #     terra::crs(planning),
+  #     method = "near"
+  #   )
+  #   sim$standAge <- terra::resample(
+  #     sa_src,
+  #     planning,
+  #     method = "near"
+  #   )
+  # }
+ 
   
   return(invisible(sim))
 }

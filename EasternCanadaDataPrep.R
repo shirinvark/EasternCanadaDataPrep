@@ -78,6 +78,12 @@ defineModule(sim, list(
                  desc = "Forest Management Units",
                  sourceURL = NA),
     expectsInput(
+      "SYU",
+      objectClass = c("sf", "SpatVector"),
+      desc = "User-defined Sustained Yield Unit polygons",
+      sourceURL = NA
+    ),
+    expectsInput(
       "BCR",
       objectClass = c("sf", "SpatVector"),
       desc = "Bird Conservation Regions",
@@ -115,36 +121,83 @@ defineModule(sim, list(
       "Jurisdiction",
       objectClass = c("sf", "SpatVector"),
       desc = "Province / State polygons"
-    ),
-    
-    expectsInput("standAge",
-                 objectClass = "SpatRaster",
-                 desc = "Stand age raster",
-                 sourceURL = NA)
-    
-  ),
-  outputObjects = bindrows(
-    
-    createsOutput(
-      objectName = "LegalConstraints",
-      objectClass = "list",
-      desc = "Legal and administrative spatial constraints derived from FMUs and protected areas."
-    ),
-    createsOutput(
-      objectName  = "jurisdictionMap",
-      objectClass = "SpatRaster",
-      desc        = "Rasterized provincial/territorial jurisdiction aligned to PlanningGrid."
-    ),
-    createsOutput(
-      objectName  = "jurisdictionLookup",
-      objectClass = c("data.table", "data.frame"),
-      desc        = "Lookup table linking jurisdiction raster IDs to jurisdiction names."
-    ),
-    createsOutput(
-      objectName = "PlanningGrid",
-      objectClass = "SpatRaster",
-      desc = "PlanningGrid used for landbase accounting and downstream AAC calculations."
     )
+    
+  #   expectsInput("standAge",
+  #                objectClass = "SpatRaster",
+  #                desc = "Stand age raster",
+  #                sourceURL = NA)
+  #   
+   )
+  ,
+  outputObjects = bindrows(
+      
+      createsOutput(
+        objectName = "PlanningGrid",
+        objectClass = "SpatRaster",
+        desc = "Planning grid used to align spatial inputs for downstream modules."
+      ),
+      
+      createsOutput(
+        objectName = "LandCover",
+        objectClass = "SpatRaster",
+        desc = "Land cover raster aligned to PlanningGrid."
+      ),
+      
+      # createsOutput(
+      #   objectName = "standAge",
+      #   objectClass = "SpatRaster",
+      #   desc = "Stand age raster aligned to PlanningGrid."
+      # ),
+      
+      createsOutput(
+        objectName = "SYU",
+        objectClass = "SpatRaster",
+        desc = "Sustained Yield Unit raster aligned to PlanningGrid."
+      ),
+      
+      createsOutput(
+        objectName = "SYULookup",
+        objectClass = c("data.frame", "data.table"),
+        desc = "Lookup table linking SYU raster IDs to SYU names."
+      ),
+      
+      createsOutput(
+        objectName = "jurisdiction",
+        objectClass = "SpatRaster",
+        desc = "Jurisdiction raster aligned to PlanningGrid."
+      ),
+      
+      createsOutput(
+        objectName = "jurisdictionLookup",
+        objectClass = c("data.table", "data.frame"),
+        desc = "Lookup table linking jurisdiction IDs to jurisdiction names."
+      ),
+      
+      createsOutput(
+        objectName = "bcr",
+        objectClass = "SpatRaster",
+        desc = "Bird Conservation Region raster aligned to PlanningGrid."
+      ),
+      
+      createsOutput(
+        objectName = "yieldCurveFamily",
+        objectClass = "SpatRaster",
+        desc = "Yield Curve Family raster aligned to PlanningGrid."
+      ),
+      
+      createsOutput(
+        objectName = "Ownership",
+        objectClass = "SpatRaster",
+        desc = "National ownership raster aligned to PlanningGrid."
+      ),
+      
+      createsOutput(
+        objectName = "protectedArea",
+        objectClass = "SpatRaster",
+        desc = "Protected area raster containing IUCN categories aligned to PlanningGrid."
+      )
+      
     
 )))
 
@@ -226,12 +279,12 @@ doEvent.EasternCanadaDataPrep <- function(sim, eventTime, eventType) {
   cpcad <- sim$CPCAD
   
   ## filters (policy-level, not ecological)
-  if ("STATUS" %in% names(cpcad))
-    cpcad <- cpcad[cpcad$STATUS %in% c(1, 2), ]
-  
-  
-  if ("IUCN_CAT" %in% names(cpcad))
-    cpcad <- cpcad[cpcad$IUCN_CAT %in% c(1, 2, 3, 4, 5, 6), ]
+  # if ("STATUS" %in% names(cpcad))
+  #   cpcad <- cpcad[cpcad$STATUS %in% c(1, 2), ]
+  # 
+  # 
+  # if ("IUCN_CAT" %in% names(cpcad))
+  #   cpcad <- cpcad[cpcad$IUCN_CAT %in% c(1, 2, 3, 4, 5, 6), ]
   
   sim$CPCAD <- cpcad
   
@@ -265,6 +318,33 @@ doEvent.EasternCanadaDataPrep <- function(sim, eventTime, eventType) {
   
   if (!terra::same.crs(sim$FMU, studyArea_v)) {
     sim$FMU <- terra::project(sim$FMU, studyArea_v)
+  }
+  # ---------------------------------------------------------
+  # SYU – Sustained Yield Units
+  # ---------------------------------------------------------
+  
+  if (SpaDES.core::suppliedElsewhere("SYU", sim)) {
+    
+    message("✔ Using user-supplied SYU polygons.")
+    
+    if (!inherits(sim$SYU, "SpatVector")) {
+      sim$SYU <- terra::vect(sim$SYU)
+    }
+    
+    if (!terra::same.crs(sim$SYU, studyArea_v)) {
+      sim$SYU <- terra::project(
+        sim$SYU,
+        terra::crs(studyArea_v)
+      )
+    }
+    
+  } else {
+    
+    message("ℹ No SYU supplied. Using entire studyArea as one SYU.")
+    
+    sim$SYU <- studyArea_v
+    sim$SYU$SYU_ID <- 1
+    sim$SYU$SYU_NAME <- "StudyArea"
   }
   ## ---------------------------------------------------------
   ## 4) BCR – Bird Conservation Regions
@@ -445,39 +525,39 @@ doEvent.EasternCanadaDataPrep <- function(sim, eventTime, eventType) {
   # 3) standAge (optional)
   # =========================================================
   
-  if (SpaDES.core::suppliedElsewhere("standAge", sim)) {
-    
-    message("✔ Using standAge supplied from upstream or user.")
-    
-  } else {
-    
-    dPath <- SpaDES.core::dataPath(sim)
-    
-    sa_dir <- file.path(dPath, "standAge")
-    dir.create(sa_dir, showWarnings = FALSE, recursive = TRUE)
-    
-    sa_file <- file.path(
-      sa_dir,
-      "standAge.tif"
-    )
-    
-    if (file.exists(sa_file)) {
-      
-      message("✔ standAge found locally. Loading...")
-      
-      sim$standAge <- terra::rast(sa_file)
-      
-    } else {
-      
-      message("ℹ No standAge available. Continuing without standAge.")
-      
-      sim$standAge <- NULL
-    }
-  }
-  
+#   if (SpaDES.core::suppliedElsewhere("standAge", sim)) {
+#     
+#     message("✔ Using standAge supplied from upstream or user.")
+#     
+#   } else {
+#     
+#     dPath <- SpaDES.core::dataPath(sim)
+#     
+#     sa_dir <- file.path(dPath, "standAge")
+#     dir.create(sa_dir, showWarnings = FALSE, recursive = TRUE)
+#     
+#     sa_file <- file.path(
+#       sa_dir,
+#       "standAge.tif"
+#     )
+#     
+#     if (file.exists(sa_file)) {
+#       
+#       message("✔ standAge found locally. Loading...")
+#       
+#       sim$standAge <- terra::rast(sa_file)
+#       
+#     } else {
+#       
+#       message("ℹ No standAge available. Continuing without standAge.")
+#       
+#       sim$standAge <- NULL
+#     }
+#   }
+#   
   return(invisible(sim))
-  
-}  # end .inputObjects
+   
+ }  # end .inputObjects
 
 ggplotFn <- function(data, ...) {
   ggplot2::ggplot(data, ggplot2::aes(TheSample)) +

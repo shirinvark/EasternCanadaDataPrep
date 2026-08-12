@@ -54,6 +54,7 @@ EasternCanadaInit <- function(sim) {
   sim <- buildJurisdiction(sim)
   sim <- buildYieldCurveFamily(sim)
   sim <- buildOwnership(sim)
+  sim <- buildProtectedAreas(sim)
   sim <- buildBCR(sim)
   
   invisible(sim)
