@@ -26,7 +26,7 @@ EasternCanadaInit <- function(sim) {
   }
   
   sim <- buildPlanningGrid(sim)
-  
+  sim <- buildSYU(sim)
   message("▶ Aligning LandCover to PlanningGrid...")
   
   stopifnot(inherits(sim$LandCover, "SpatRaster"))
@@ -52,6 +52,7 @@ EasternCanadaInit <- function(sim) {
   message("✔ LandCover aligned to PlanningGrid.")
   
   sim <- buildJurisdiction(sim)
+  sim <- buildDMFL(sim)
   sim <- buildYieldCurveFamily(sim)
   sim <- buildOwnership(sim)
   sim <- buildProtectedAreas(sim)

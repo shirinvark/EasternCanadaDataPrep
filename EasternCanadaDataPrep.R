@@ -100,6 +100,12 @@ defineModule(sim, list(
       objectClass = c("sf", "SpatVector"),
       desc = "Ontario Yield Curve Family polygons"
     ),
+    expectsInput(
+      "DMFL_ON",
+      objectClass = c("sf", "SpatVector"),
+      desc = "Ontario Designated Managed Forest Land polygons based on ecoregion boundaries",
+      sourceURL = NA
+    ),
     
     expectsInput(
       "YCF_NL",
@@ -184,6 +190,11 @@ defineModule(sim, list(
         objectName = "yieldCurveFamily",
         objectClass = "SpatRaster",
         desc = "Yield Curve Family raster aligned to PlanningGrid."
+      ),
+      createsOutput(
+        objectName = "DMFL",
+        objectClass = "SpatRaster",
+        desc = "Designated Managed Forest Land raster aligned to PlanningGrid; 1 = inside DMFL, 0 = outside"
       ),
       
       createsOutput(
@@ -321,6 +332,9 @@ doEvent.EasternCanadaDataPrep <- function(sim, eventTime, eventType) {
   }
   # ---------------------------------------------------------
   # SYU – Sustained Yield Units
+  #
+  # Uses user-supplied SYU polygons when available.
+  # Otherwise, uses the national FMU layer as the default SYU.
   # ---------------------------------------------------------
   
   if (SpaDES.core::suppliedElsewhere("SYU", sim)) {
@@ -340,11 +354,9 @@ doEvent.EasternCanadaDataPrep <- function(sim, eventTime, eventType) {
     
   } else {
     
-    message("ℹ No SYU supplied. Using entire studyArea as one SYU.")
+    message("ℹ No SYU supplied. Using FMU polygons as default SYU.")
     
-    sim$SYU <- studyArea_v
-    sim$SYU$SYU_ID <- 1
-    sim$SYU$SYU_NAME <- "StudyArea"
+    sim$SYU <- sim$FMU
   }
   ## ---------------------------------------------------------
   ## 4) BCR – Bird Conservation Regions
@@ -482,6 +494,29 @@ doEvent.EasternCanadaDataPrep <- function(sim, eventTime, eventType) {
     )
     
   }
+  ## ---------------------------------------------------------
+  ## 8) Ontario DMFL
+  ## ---------------------------------------------------------
+  
+  if (!SpaDES.core::suppliedElsewhere("DMFL_ON")) {
+    
+    message("▶ Preparing Ontario DMFL polygons...")
+    
+    sim$DMFL_ON <- Cache(
+      prepInputs,
+      url = "https://drive.google.com/uc?export=download&id=10CLrF7yNeBdd0cjv4wD32v73DhDrswfK",
+      destinationPath = file.path(dPath, "ON", "DMFL"),
+      targetFile = file.path(
+        "Ecoregions",
+        "ecoregions.shp"
+      ),
+      fun = terra::vect,
+      cropTo = studyArea_sf,
+      projectTo = studyArea_sf
+    )
+  }
+  
+  message("✔ Ontario DMFL polygons ready.")
   # =========================================================
   # 2) LandCover
   # =========================================================
