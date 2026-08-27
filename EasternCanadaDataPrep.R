@@ -24,7 +24,6 @@ defineModule(sim, list(
     "LandR" ,
     "rnaturalearth"
   ),  parameters = bindrows(
-    #defineParameter("paramName", "paramClass", value, min, max, "parameter description"),
     defineParameter(".plots", "character", "screen", NA, NA,
                     "Used by Plots function, which can be optionally used here"),
     defineParameter(
@@ -46,7 +45,6 @@ defineModule(sim, list(
     defineParameter(".studyAreaName", "character", NA, NA, NA,
                     "Human-readable name for the study area used - e.g., a hash of the study",
                     "area obtained using `reproducible::studyAreaName()`"),
-    ## .seed is optional: `list('init' = 123)` will `set.seed(123)` for the `init` event only.
     defineParameter(".seed", "list", list(), NA, NA,
                     "Named list of seeds to use for each event (names)."),
     defineParameter(
@@ -129,11 +127,6 @@ defineModule(sim, list(
       desc = "Province / State polygons"
     )
     
-  #   expectsInput("standAge",
-  #                objectClass = "SpatRaster",
-  #                desc = "Stand age raster",
-  #                sourceURL = NA)
-  #   
    )
   ,
   outputObjects = bindrows(
@@ -149,12 +142,6 @@ defineModule(sim, list(
         objectClass = "SpatRaster",
         desc = "Land cover raster aligned to PlanningGrid."
       ),
-      
-      # createsOutput(
-      #   objectName = "standAge",
-      #   objectClass = "SpatRaster",
-      #   desc = "Stand age raster aligned to PlanningGrid."
-      # ),
       
       createsOutput(
         objectName = "SYU",
@@ -260,17 +247,16 @@ doEvent.EasternCanadaDataPrep <- function(sim, eventTime, eventType) {
     studyArea_v <- studyArea_sf
   } else {
     studyArea_v <- terra::vect(studyArea_sf)
-  }  ## ---------------------------------------------------------
+  }  
   
-  ## ---------------------------------------------------------
-  
+
   ## ---------------------------------------------------------
   ## 2) CPCAD – Protected & conserved areas
   ## ---------------------------------------------------------
   if (!SpaDES.core::suppliedElsewhere("CPCAD")){
     
     cpcad_dir <- file.path(dPath, "CPCAD")
-    # dir.create(cpcad_dir, recursive = TRUE, showWarnings = FALSE)
+    
     
     message("▶ Preparing CPCAD...")
     
@@ -288,14 +274,6 @@ doEvent.EasternCanadaDataPrep <- function(sim, eventTime, eventType) {
   }
   
   cpcad <- sim$CPCAD
-  
-  ## filters (policy-level, not ecological)
-  # if ("STATUS" %in% names(cpcad))
-  #   cpcad <- cpcad[cpcad$STATUS %in% c(1, 2), ]
-  # 
-  # 
-  # if ("IUCN_CAT" %in% names(cpcad))
-  #   cpcad <- cpcad[cpcad$IUCN_CAT %in% c(1, 2, 3, 4, 5, 6), ]
   
   sim$CPCAD <- cpcad
   
@@ -368,7 +346,7 @@ doEvent.EasternCanadaDataPrep <- function(sim, eventTime, eventType) {
     
     bcr_dir <- file.path(dPath, "BCR")
     
-    ## اگر قبلاً extract شده باشد
+ 
     gdb <- list.dirs(
       bcr_dir,
       recursive = FALSE,
@@ -376,7 +354,7 @@ doEvent.EasternCanadaDataPrep <- function(sim, eventTime, eventType) {
     )
     gdb <- gdb[grepl("\\.gdb$", gdb)]
     
-    ## اگر هنوز وجود ندارد، دانلود و extract
+    t
     if (length(gdb) == 0) {
       
       prepInputs(
@@ -554,42 +532,7 @@ doEvent.EasternCanadaDataPrep <- function(sim, eventTime, eventType) {
       )
     }
   }
-  
-  # =========================================================
-  # =========================================================
-  # 3) standAge (optional)
-  # =========================================================
-  
-#   if (SpaDES.core::suppliedElsewhere("standAge", sim)) {
-#     
-#     message("✔ Using standAge supplied from upstream or user.")
-#     
-#   } else {
-#     
-#     dPath <- SpaDES.core::dataPath(sim)
-#     
-#     sa_dir <- file.path(dPath, "standAge")
-#     dir.create(sa_dir, showWarnings = FALSE, recursive = TRUE)
-#     
-#     sa_file <- file.path(
-#       sa_dir,
-#       "standAge.tif"
-#     )
-#     
-#     if (file.exists(sa_file)) {
-#       
-#       message("✔ standAge found locally. Loading...")
-#       
-#       sim$standAge <- terra::rast(sa_file)
-#       
-#     } else {
-#       
-#       message("ℹ No standAge available. Continuing without standAge.")
-#       
-#       sim$standAge <- NULL
-#     }
-#   }
-#   
+
   return(invisible(sim))
    
  }  # end .inputObjects
