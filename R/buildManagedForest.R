@@ -14,7 +14,7 @@ buildManagedForest <- function(sim) {
   
   
   
-  message("✔ Managed forest mask ready.")
+  message("Managed forest mask ready.")
   
   sim
   

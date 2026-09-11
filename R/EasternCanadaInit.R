@@ -1,6 +1,6 @@
 EasternCanadaInit <- function(sim) {
   
-  message("🔵 init: building Eastern Canada spatial products")
+  message("init: building Eastern Canada spatial products")
   
   stopifnot(
     !is.null(sim$studyArea),
@@ -27,7 +27,7 @@ EasternCanadaInit <- function(sim) {
   
   sim <- buildPlanningGrid(sim)
   sim <- buildSYU(sim)
-  message("▶ Aligning LandCover to PlanningGrid...")
+  message("Aligning LandCover to PlanningGrid...")
   
   stopifnot(inherits(sim$LandCover, "SpatRaster"))
   stopifnot(inherits(sim$PlanningGrid, "SpatRaster"))
@@ -49,7 +49,7 @@ EasternCanadaInit <- function(sim) {
   
   names(sim$LandCover) <- "landCover"
   
-  message("✔ LandCover aligned to PlanningGrid.")
+  message("LandCover aligned to PlanningGrid.")
   
   sim <- buildJurisdiction(sim)
   sim <- buildDMFL(sim)

@@ -7,7 +7,7 @@
 buildPlanningGrid <- function(sim) {
   # browser()
   
-  message("🔵 Building PlanningGrid and aligning layers...")
+  message("Building PlanningGrid and aligning layers...")
   
   if (inherits(sim$studyArea, "SpatVector")) {
     study_v <- sim$studyArea
@@ -36,7 +36,7 @@ buildPlanningGrid <- function(sim) {
   lc_src <- sim$LandCover  
   message("LandCover ncell BEFORE crop: ", terra::ncell(lc_src))
   
-  # 1️⃣ crop (safe)
+  # 1 crop (safe)
   if (!terra::same.crs(study_v, lc_src)) {
     study_v_original_crs <- terra::project(study_v, terra::crs(lc_src))
   } else {
@@ -55,10 +55,10 @@ buildPlanningGrid <- function(sim) {
   
   
   if (is.null(lc_src) || terra::ncell(lc_src) == 0) {
-    stop("❌ Crop produced empty raster.")
+    stop("Crop produced empty raster.")
   }
   
-  # 2️⃣ project to analysis CRS
+  # 2 project to analysis CRS
   planning_template <- sim$rasterToMatch 
   message("STARTING PROJECT/RESAMPLE")
   message("STARTING PRE-AGGREGATION")
@@ -147,7 +147,7 @@ buildPlanningGrid <- function(sim) {
   )
   
   message(
-    "✔ SYU raster created. Number of SYUs: ",
+    "SYU raster created. Number of SYUs: ",
     nrow(sim$SYULookup)
   )
   # ---------------------------------------------------------

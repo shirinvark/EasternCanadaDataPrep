@@ -8,7 +8,7 @@
 
 buildBCR <- function(sim) {
   
-  message("🔵 Building Bird Conservation Region map...")
+  message("Building Bird Conservation Region map...")
   
   stopifnot(
     inherits(sim$PlanningGrid, "SpatRaster"),
@@ -61,7 +61,7 @@ buildBCR <- function(sim) {
   )
   names(sim$bcr) <- "bcr"
   message(
-    "✔ BCR raster created (",
+    "BCR raster created (",
     nrow(sim$bcrLookup),
     " BCRs)"
   )

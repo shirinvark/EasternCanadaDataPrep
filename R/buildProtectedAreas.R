@@ -39,7 +39,7 @@ buildProtectedAreas <- function(sim) {
   
   names(sim$protectedArea) <- "protectedArea"
   
-  message("✔ Protected Areas raster created.")
+  message("Protected Areas raster created.")
   
   sim
 }

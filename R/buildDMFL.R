@@ -101,7 +101,7 @@ buildDMFL <- function(sim) {
   names(sim$DMFL) <- "DMFL"
   
   message(
-    "✔ DMFL raster created. ",
+    "DMFL raster created. ",
     "Ontario DMFL restriction applied; ",
     "other jurisdictions currently unrestricted."
   )

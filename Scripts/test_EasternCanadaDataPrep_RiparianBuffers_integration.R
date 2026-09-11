@@ -168,4 +168,4 @@ plot(
   main = "Riparian Fraction"
 )
 
-message("✅ TEST FINISHED")
+message("TEST FINISHED")
