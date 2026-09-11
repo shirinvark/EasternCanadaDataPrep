@@ -221,7 +221,7 @@ doEvent.EasternCanadaDataPrep <- function(sim, eventTime, eventType) {
   ## ---------------------------------------------------------
   if (!SpaDES.core::suppliedElsewhere("studyArea")) {
     
-    message("🔵 Creating default studyArea (Eastern Canada)...")
+    message("Creating default studyArea (Eastern Canada)...")
     
     can <- rnaturalearth::ne_states(
       country = "Canada",
@@ -258,7 +258,7 @@ doEvent.EasternCanadaDataPrep <- function(sim, eventTime, eventType) {
     cpcad_dir <- file.path(dPath, "CPCAD")
     
     
-    message("▶ Preparing CPCAD...")
+    message("Preparing CPCAD...")
     
     sim$CPCAD <- Cache(
       prepInputs,
@@ -281,7 +281,7 @@ doEvent.EasternCanadaDataPrep <- function(sim, eventTime, eventType) {
     sim$CPCAD <- terra::project(sim$CPCAD, studyArea_v)
   }
   
-  message("✔ CPCAD ready. Features: ", nrow(sim$CPCAD))
+  message("CPCAD ready. Features: ", nrow(sim$CPCAD))
   
   
   ## ---------------------------------------------------------
@@ -291,7 +291,7 @@ doEvent.EasternCanadaDataPrep <- function(sim, eventTime, eventType) {
     
     fmu_dir <- file.path(dPath, "FMU")
     
-    message("▶ Preparing FMU...")
+    message("Preparing FMU...")
     
     sim$FMU <- Cache(
       prepInputs,
@@ -317,7 +317,7 @@ doEvent.EasternCanadaDataPrep <- function(sim, eventTime, eventType) {
   
   if (SpaDES.core::suppliedElsewhere("SYU", sim)) {
     
-    message("✔ Using user-supplied SYU polygons.")
+    message("Using user-supplied SYU polygons.")
     
     if (!inherits(sim$SYU, "SpatVector")) {
       sim$SYU <- terra::vect(sim$SYU)
@@ -332,7 +332,7 @@ doEvent.EasternCanadaDataPrep <- function(sim, eventTime, eventType) {
     
   } else {
     
-    message("ℹ No SYU supplied. Using FMU polygons as default SYU.")
+    message("No SYU supplied. Using FMU polygons as default SYU.")
     
     sim$SYU <- sim$FMU
   }
@@ -342,7 +342,7 @@ doEvent.EasternCanadaDataPrep <- function(sim, eventTime, eventType) {
   
   if (!SpaDES.core::suppliedElsewhere("BCR")) {
     
-    message("▶ Preparing BCR...")
+    message("Preparing BCR...")
     
     bcr_dir <- file.path(dPath, "BCR")
     
@@ -388,7 +388,7 @@ doEvent.EasternCanadaDataPrep <- function(sim, eventTime, eventType) {
   
   if (!SpaDES.core::suppliedElsewhere("Jurisdiction")) {
     
-    message("▶ Preparing Jurisdiction...")
+    message("Preparing Jurisdiction...")
     
     sim$Jurisdiction <- Cache(
       prepInputs,
@@ -407,7 +407,7 @@ doEvent.EasternCanadaDataPrep <- function(sim, eventTime, eventType) {
     
   }
   
-  message("✔ Jurisdiction ready. Features: ", nrow(sim$Jurisdiction))
+  message("Jurisdiction ready. Features: ", nrow(sim$Jurisdiction))
   
   ## ---------------------------------------------------------
   ## 6) Ownership – National ownership layer
@@ -415,7 +415,7 @@ doEvent.EasternCanadaDataPrep <- function(sim, eventTime, eventType) {
   
   if (!SpaDES.core::suppliedElsewhere("Ownership")) {
     
-    message("▶ Preparing Ownership...")
+    message("Preparing Ownership...")
     
     ownership_dir <- file.path(dPath, "Ownership")
     
@@ -440,14 +440,14 @@ doEvent.EasternCanadaDataPrep <- function(sim, eventTime, eventType) {
     
   }
   
-  message("✔ Ownership ready.")
+  message("Ownership ready.")
   ## ---------------------------------------------------------
   ## 7) Yield Curve Family
   ## ---------------------------------------------------------
   
   if (!SpaDES.core::suppliedElsewhere("YCF_ON")) {
     
-    message("▶ Preparing Ontario Yield Curve Family...")
+    message("Preparing Ontario Yield Curve Family...")
     
     sim$YCF_ON <- Cache(
       prepInputs,
@@ -461,7 +461,7 @@ doEvent.EasternCanadaDataPrep <- function(sim, eventTime, eventType) {
   
   if (!SpaDES.core::suppliedElsewhere("YCF_NL")) {
     
-    message("▶ Preparing Newfoundland Yield Curve Family...")
+    message("Preparing Newfoundland Yield Curve Family...")
     
     sim$YCF_NL <- Cache(
       prepInputs,
@@ -478,7 +478,7 @@ doEvent.EasternCanadaDataPrep <- function(sim, eventTime, eventType) {
   
   if (!SpaDES.core::suppliedElsewhere("DMFL_ON")) {
     
-    message("▶ Preparing Ontario DMFL polygons...")
+    message("Preparing Ontario DMFL polygons...")
     
     sim$DMFL_ON <- Cache(
       prepInputs,
@@ -494,14 +494,14 @@ doEvent.EasternCanadaDataPrep <- function(sim, eventTime, eventType) {
     )
   }
   
-  message("✔ Ontario DMFL polygons ready.")
+  message("Ontario DMFL polygons ready.")
   # =========================================================
   # 2) LandCover
   # =========================================================
   
   if (SpaDES.core::suppliedElsewhere("LandCover", sim)) {
     
-    message("✔ Using LandCover supplied from upstream or user.")
+    message("Using LandCover supplied from upstream or user.")
     
   } else {
     
@@ -514,13 +514,13 @@ doEvent.EasternCanadaDataPrep <- function(sim, eventTime, eventType) {
     
     if (file.exists(lc_file)) {
       
-      message("✔ LandCover found locally. Loading...")
+      message("LandCover found locally. Loading...")
       
       sim$LandCover <- terra::rast(lc_file)
       
     } else {
       
-      message("⬇ LandCover not found locally. Downloading from Drive...")
+      message("LandCover not found locally. Downloading from Drive...")
       
       sim$LandCover <- Cache(
         prepInputs,
