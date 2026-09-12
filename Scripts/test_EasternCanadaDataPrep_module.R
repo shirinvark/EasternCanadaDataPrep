@@ -22,7 +22,9 @@ setPaths(
   modulePath  = "E:/EasternCanadaDataPrep/modules",
   scratchPath = "E:/EasternCanadaDataPrep/scratch"
 )
-
+options(
+  reproducible.destinationPath = getPaths()$inputPath
+)
 ## =========================================================
 ## 3) LOAD SMALL STUDY AREA
 ## =========================================================

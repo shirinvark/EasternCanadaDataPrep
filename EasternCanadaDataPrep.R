@@ -213,12 +213,22 @@ doEvent.EasternCanadaDataPrep <- function(sim, eventTime, eventType) {
 
 .inputObjects <- function(sim) {
   
-  dPath <- asPath(getOption("reproducible.destinationPath", dataPath(sim)), 1)
-  message(currentModule(sim), ": using dataPath '", dPath, "'.")
+  dPath <- getOption("reproducible.destinationPath")
   
-  ## ---------------------------------------------------------
+  if (is.null(dPath)) {
+    stop(
+      "reproducible.destinationPath is not set. ",
+      "Set it to the project inputs directory before running the module."
+    )
+  }
+  
+  dPath <- asPath(dPath, 1)
+  
+  message(currentModule(sim), ": using input data path '", dPath, "'.")
+  
+  ## -------------------------------------------------------
   ## 1) Create studyArea if not provided by user
-  ## ---------------------------------------------------------
+  ## -------------------------------------------------------
   if (!SpaDES.core::suppliedElsewhere("studyArea")) {
     
     message("Creating default studyArea (Eastern Canada)...")
@@ -248,7 +258,7 @@ doEvent.EasternCanadaDataPrep <- function(sim, eventTime, eventType) {
   
   studyArea_v <- sim$studyArea 
   
-
+  
   ## ---------------------------------------------------------
   ## 2) CPCAD – Protected & conserved areas
   ## ---------------------------------------------------------
@@ -510,7 +520,7 @@ doEvent.EasternCanadaDataPrep <- function(sim, eventTime, eventType) {
     
   } else {
     
-    dPath <- SpaDES.core::dataPath(sim)
+    #dPath <- SpaDES.core::dataPath(sim)
     
     lc_dir <- file.path(dPath, "LandCover")
     dir.create(lc_dir, showWarnings = FALSE, recursive = TRUE)
@@ -537,10 +547,10 @@ doEvent.EasternCanadaDataPrep <- function(sim, eventTime, eventType) {
       )
     }
   }
-
+  
   return(invisible(sim))
-   
- }  # end .inputObjects
+  
+}  # end .inputObjects
 
 ggplotFn <- function(data, ...) {
   ggplot2::ggplot(data, ggplot2::aes(TheSample)) +
