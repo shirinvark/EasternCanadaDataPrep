@@ -60,7 +60,7 @@ buildSYU <- function(sim) {
   names(sim$SYU) <- "SYU"
   
   message(
-    "✔ SYU ready. Units: ",
+    "SYU ready. Units: ",
     nrow(sim$SYULookup)
   )
   

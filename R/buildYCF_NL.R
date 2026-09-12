@@ -27,12 +27,7 @@ buildYCF_NL <- function(sim) {
   ycf <- ycf[, c("Province", "YCF")]
   
   ycf
-  message("NL features before crop: ", nrow(sim$YCF_NL))
   
-  message("NL features after crop: ", nrow(ycf))
-  ycf$Province <- "NL"
   
-  ycf <- ycf[, c("Province", "YCF")]
   
-  ycf
 }

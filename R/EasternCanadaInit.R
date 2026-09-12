@@ -1,6 +1,6 @@
 EasternCanadaInit <- function(sim) {
   
-  message("🔵 init: building Eastern Canada spatial products")
+  message("init: building Eastern Canada spatial products")
   
   stopifnot(
     !is.null(sim$studyArea),
@@ -12,22 +12,16 @@ EasternCanadaInit <- function(sim) {
     
     message("No rasterToMatch supplied. Creating default 240 m rasterToMatch.")
     
-    study_v <- if (inherits(sim$studyArea, "SpatVector")) {
-      sim$studyArea
-    } else {
-      terra::vect(sim$studyArea)
-    }
-    
     sim$rasterToMatch <- terra::rast(
-      ext = terra::ext(study_v),
+      ext = terra::ext(sim$studyArea),
       resolution = 240,
-      crs = terra::crs(study_v)
+      crs = terra::crs(sim$studyArea)
     )
   }
   
   sim <- buildPlanningGrid(sim)
   sim <- buildSYU(sim)
-  message("▶ Aligning LandCover to PlanningGrid...")
+  message("Aligning LandCover to PlanningGrid...")
   
   stopifnot(inherits(sim$LandCover, "SpatRaster"))
   stopifnot(inherits(sim$PlanningGrid, "SpatRaster"))
@@ -49,7 +43,7 @@ EasternCanadaInit <- function(sim) {
   
   names(sim$LandCover) <- "landCover"
   
-  message("✔ LandCover aligned to PlanningGrid.")
+  message("LandCover aligned to PlanningGrid.")
   
   sim <- buildJurisdiction(sim)
   sim <- buildDMFL(sim)

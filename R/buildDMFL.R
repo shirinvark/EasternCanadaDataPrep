@@ -23,7 +23,7 @@ buildDMFL <- function(sim) {
   stopifnot(
     inherits(sim$PlanningGrid, "SpatRaster"),
     inherits(sim$DMFL_ON, "SpatVector"),
-    inherits(sim$jurisdiction, "SpatRaster")
+    inherits(sim$jurisdictionMap, "SpatRaster")
   )
   
   # ---------------------------------------------------------
@@ -39,7 +39,7 @@ buildDMFL <- function(sim) {
   # Identify Ontario in jurisdiction raster
   # ---------------------------------------------------------
   
-  jurLevels <- terra::levels(sim$jurisdiction)
+  jurLevels <- terra::levels(sim$jurisdictionMap)
   
   if (
     length(jurLevels) == 0 ||
@@ -93,7 +93,7 @@ buildDMFL <- function(sim) {
   # ---------------------------------------------------------
   
   sim$DMFL <- terra::ifel(
-    sim$jurisdiction == ontarioID,
+    sim$jurisdictionMap == ontarioID,
     dmflONRaster,
     1
   )
@@ -101,7 +101,7 @@ buildDMFL <- function(sim) {
   names(sim$DMFL) <- "DMFL"
   
   message(
-    "✔ DMFL raster created. ",
+    "DMFL raster created. ",
     "Ontario DMFL restriction applied; ",
     "other jurisdictions currently unrestricted."
   )

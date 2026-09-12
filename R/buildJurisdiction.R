@@ -59,7 +59,7 @@ buildJurisdiction <- function(sim) {
       )
     ]
   
-  message("✔ Jurisdiction raster ready.")
+  message("Jurisdiction raster ready.")
   
   sim
 }
