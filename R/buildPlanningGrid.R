@@ -11,6 +11,10 @@ buildPlanningGrid <- function(sim) {
   
   study_v <- sim$studyArea
   
+  if (!inherits(study_v, "SpatVector")) {
+    study_v <- terra::vect(study_v)
+  }
+  
   targetRes <- terra::res(sim$rasterToMatch)[1]
   ext <- terra::ext(study_v)
   
