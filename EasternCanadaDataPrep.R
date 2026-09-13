@@ -354,21 +354,19 @@ doEvent.EasternCanadaDataPrep <- function(sim, eventTime, eventType) {
   ## ---------------------------------------------------------
   
   if (!SpaDES.core::suppliedElsewhere("BCR")) {
-    
     message("Preparing BCR...")
     
     sim$BCR <- Cache(
       prepInputs,
       url = "https://drive.google.com/uc?export=download&id=18pnd5-qDDwTmgHN2NxyU_VyBP3tk9R97",
       destinationPath = file.path(dPath, "BCR"),
-      fun = terra::vect,
+      fun = sf::st_read,
       layer = "BCR_Terrestrial_Master",
-      cropTo = studyArea_v,
-      projectTo = studyArea_v
+      quiet = TRUE
     )
-    
   }
   
+  # Standardize to SpatVector immediately
   if (!inherits(sim$BCR, "SpatVector")) {
     sim$BCR <- terra::vect(sim$BCR)
   }
@@ -380,7 +378,7 @@ doEvent.EasternCanadaDataPrep <- function(sim, eventTime, eventType) {
   sim$BCR <- terra::crop(sim$BCR, studyArea_v)
   
   if (nrow(sim$BCR) == 0) {
-    stop("BCR is empty after cropping to studyArea.")
+    stop("No BCR polygons overlap the study area.")
   }
   
   message("BCR ready. Features: ", nrow(sim$BCR))
