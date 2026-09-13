@@ -354,12 +354,15 @@ doEvent.EasternCanadaDataPrep <- function(sim, eventTime, eventType) {
   ## ---------------------------------------------------------
   
   if (!SpaDES.core::suppliedElsewhere("BCR")) {
+    
     message("Preparing BCR...")
     
     sim$BCR <- Cache(
       prepInputs,
+      targetFile = "af5831ba-e41b-4b2e-9a0a-d8fcf2b70d70.gdb",
       url = "https://drive.google.com/uc?export=download&id=18pnd5-qDDwTmgHN2NxyU_VyBP3tk9R97",
       destinationPath = file.path(dPath, "BCR"),
+      alsoExtract = "\\.gdb/",
       fun = sf::st_read,
       layer = "BCR_Terrestrial_Master",
       quiet = TRUE
