@@ -49,10 +49,55 @@ EasternCanadaInit <- function(sim) {
   sim <- buildDMFL(sim)
   sim <- buildYieldCurveFamily(sim)
   sim <- buildOwnership(sim)
+  
+  # ---------------------------------------------------------
+  # Align Ownership to PlanningGrid
+  # ---------------------------------------------------------
+  
+  message("Aligning Ownership to PlanningGrid...")
+  
+  stopifnot(
+    inherits(sim$Ownership, "SpatRaster"),
+    inherits(sim$PlanningGrid, "SpatRaster")
+  )
+  
+  if (!terra::same.crs(sim$Ownership, sim$PlanningGrid)) {
+    
+    sim$Ownership <- terra::project(
+      sim$Ownership,
+      sim$PlanningGrid,
+      method = "near"
+    )
+    
+  } else if (!terra::compareGeom(
+    sim$Ownership,
+    sim$PlanningGrid,
+    stopOnError = FALSE
+  )) {
+    
+    sim$Ownership <- terra::resample(
+      sim$Ownership,
+      sim$PlanningGrid,
+      method = "near"
+    )
+  }
+  
+  names(sim$Ownership) <- "Ownership"
+  
+  stopifnot(
+    terra::compareGeom(
+      sim$Ownership,
+      sim$PlanningGrid,
+      stopOnError = FALSE
+    )
+  )
+  
+  message("Ownership aligned to PlanningGrid.")
+  
   sim <- buildProtectedAreas(sim)
   sim <- buildBCR(sim)
   
   invisible(sim)
 }
-    
-    
+
+

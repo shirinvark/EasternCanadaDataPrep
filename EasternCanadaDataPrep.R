@@ -272,11 +272,11 @@ doEvent.EasternCanadaDataPrep <- function(sim, eventTime, eventType) {
     sim$CPCAD <- Cache(
       prepInputs,
       url = "https://drive.google.com/uc?export=download&id=1ELIaRgO5PNgliGh0Tq2BI6V5654ydxYu",
-      destinationPath = file.path(dPath, "CPCAD"),#cpcad_dir,
+      destinationPath = file.path(dPath, "CPCAD"),
       targetFile = "CPCAD_2024.gpkg",
       fun = terra::vect,
-      layer = "ProtectedConservedArea_2024 ProtectedConservedArea_2024",
-      cropTo    = studyArea_v,
+      layer = "ProtectedConservedArea_2024",
+      cropTo = studyArea_v,
       projectTo = studyArea_v
     )
     
@@ -434,19 +434,17 @@ doEvent.EasternCanadaDataPrep <- function(sim, eventTime, eventType) {
       destinationPath = ownership_dir,
       targetFile = "Ownership.tif",
       fun = terra::rast,
-      cropTo = studyArea_v,
-      projectTo = studyArea_v
+      cropTo = studyArea_v
     )
-    
   }
   
   if (!terra::same.crs(sim$Ownership, studyArea_v)) {
     
     sim$Ownership <- terra::project(
       sim$Ownership,
-      studyArea_v
+      studyArea_v,
+      method = "near"
     )
-    
   }
   
   message("Ownership ready.")

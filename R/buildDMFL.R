@@ -34,9 +34,10 @@ buildDMFL <- function(sim) {
   
   sim$DMFL <- terra::rast(sim$PlanningGrid)
   sim$DMFL[] <- 1
+  names(sim$DMFL) <- "DMFL"
   
   # ---------------------------------------------------------
-  # Identify Ontario in jurisdiction raster
+  # Read jurisdiction lookup
   # ---------------------------------------------------------
   
   jurLevels <- terra::levels(sim$jurisdictionMap)
@@ -59,8 +60,25 @@ buildDMFL <- function(sim) {
     idField
   ]
   
-  if (length(ontarioID) != 1) {
-    stop("Could not uniquely identify Ontario in jurisdiction raster.")
+  # ---------------------------------------------------------
+  # No Ontario in study area
+  #
+  # No DMFL restriction is currently applied to other
+  # jurisdictions.
+  # ---------------------------------------------------------
+  
+  if (length(ontarioID) == 0) {
+    
+    message(
+      "Ontario not present in study area. ",
+      "No DMFL restriction applied."
+    )
+    
+    return(sim)
+  }
+  
+  if (length(ontarioID) > 1) {
+    stop("Ontario appears more than once in jurisdiction lookup.")
   }
   
   # ---------------------------------------------------------
@@ -79,7 +97,6 @@ buildDMFL <- function(sim) {
   
   dmflON$DMFL <- 1
   
-  # Rasterize Ontario polygons
   dmflONRaster <- terra::rasterize(
     dmflON,
     sim$PlanningGrid,
