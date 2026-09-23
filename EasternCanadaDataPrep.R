@@ -23,7 +23,8 @@ defineModule(sim, list(
     "terra",
     "LandR" ,
     "rnaturalearth"
-  ),  parameters = bindrows(
+  ), 
+  parameters = bindrows(
     defineParameter(".plots", "character", "screen", NA, NA,
                     "Used by Plots function, which can be optionally used here"),
     defineParameter(
@@ -64,17 +65,18 @@ defineModule(sim, list(
     expectsInput("studyArea",
                  objectClass = c("sf", "SpatVector"),
                  desc = "Study area polygon",
-                 sourceURL = NA),
-    
+                 sourceURL = NA
+    ),
     expectsInput("CPCAD",
                  objectClass = c("sf", "SpatVector"),
                  desc = "Protected areas",
-                 sourceURL = NA),
-    
+                 sourceURL = NA
+    ),
     expectsInput("FMU",
                  objectClass = c("sf", "SpatVector"),
                  desc = "Forest Management Units",
-                 sourceURL = NA),
+                 sourceURL = NA
+    ),
     expectsInput(
       "SYU",
       objectClass = c("sf", "SpatVector"),
@@ -104,17 +106,16 @@ defineModule(sim, list(
       desc = "Ontario Designated Managed Forest Land polygons based on ecoregion boundaries",
       sourceURL = NA
     ),
-    
     expectsInput(
       "YCF_NL",
       objectClass = c("sf", "SpatVector"),
       desc = "Newfoundland Yield Curve Family polygons"
     ),
-    
     expectsInput("LandCover",
                  objectClass = "SpatRaster",
                  desc = "Land cover raster",
-                 sourceURL = NA),
+                 sourceURL = NA
+    ),
     expectsInput(
       "rasterToMatch",
       objectClass = "SpatRaster",
@@ -126,78 +127,65 @@ defineModule(sim, list(
       objectClass = c("sf", "SpatVector"),
       desc = "Province / State polygons"
     )
-    
-   )
-  ,
+   ),
   outputObjects = bindrows(
-      
-      createsOutput(
-        objectName = "PlanningGrid",
-        objectClass = "SpatRaster",
-        desc = "Planning grid used to align spatial inputs for downstream modules."
-      ),
-      
-      createsOutput(
-        objectName = "LandCover",
-        objectClass = "SpatRaster",
-        desc = "Land cover raster aligned to PlanningGrid."
-      ),
-      
-      createsOutput(
-        objectName = "SYU",
-        objectClass = "SpatRaster",
-        desc = "Sustained Yield Unit raster aligned to PlanningGrid."
-      ),
-      
-      createsOutput(
-        objectName = "SYULookup",
-        objectClass = c("data.frame", "data.table"),
-        desc = "Lookup table linking SYU raster IDs to SYU names."
-      ),
-      
-      createsOutput(
-        objectName = "jurisdictionMap",
-        objectClass = "SpatRaster",
-        desc = "Jurisdiction raster aligned to PlanningGrid."
-      ),
-      
-      createsOutput(
-        objectName = "jurisdictionLookup",
-        objectClass = c("data.table", "data.frame"),
-        desc = "Lookup table linking jurisdiction IDs to jurisdiction names."
-      ),
-      
-      createsOutput(
-        objectName = "bcr",
-        objectClass = "SpatRaster",
-        desc = "Bird Conservation Region raster aligned to PlanningGrid."
-      ),
-      
-      createsOutput(
-        objectName = "yieldCurveFamily",
-        objectClass = "SpatRaster",
-        desc = "Yield Curve Family raster aligned to PlanningGrid."
-      ),
-      createsOutput(
-        objectName = "DMFL",
-        objectClass = "SpatRaster",
-        desc = "Designated Managed Forest Land raster aligned to PlanningGrid; 1 = inside DMFL, 0 = outside"
-      ),
-      
-      createsOutput(
-        objectName = "Ownership",
-        objectClass = "SpatRaster",
-        desc = "National ownership raster aligned to PlanningGrid."
-      ),
-      
-      createsOutput(
-        objectName = "protectedArea",
-        objectClass = "SpatRaster",
-        desc = "Protected area raster containing IUCN categories aligned to PlanningGrid."
-      )
-      
-    
-)))
+    createsOutput(
+      objectName = "PlanningGrid",
+      objectClass = "SpatRaster",
+      desc = "Planning grid used to align spatial inputs for downstream modules."
+    ),
+    createsOutput(
+      objectName = "LandCover",
+      objectClass = "SpatRaster",
+      desc = "Land cover raster aligned to PlanningGrid."
+    ),
+    createsOutput(
+      objectName = "SYU",
+      objectClass = "SpatRaster",
+      desc = "Sustained Yield Unit raster aligned to PlanningGrid."
+    ),
+    createsOutput(
+      objectName = "SYULookup",
+      objectClass = c("data.frame", "data.table"),
+      desc = "Lookup table linking SYU raster IDs to SYU names."
+    ),
+    createsOutput(
+      objectName = "jurisdictionMap",
+      objectClass = "SpatRaster",
+      desc = "Jurisdiction raster aligned to PlanningGrid."
+    ),
+    createsOutput(
+      objectName = "jurisdictionLookup",
+      objectClass = c("data.table", "data.frame"),
+      desc = "Lookup table linking jurisdiction IDs to jurisdiction names."
+    ),
+    createsOutput(
+      objectName = "bcr",
+      objectClass = "SpatRaster",
+      desc = "Bird Conservation Region raster aligned to PlanningGrid."
+    ),
+    createsOutput(
+      objectName = "yieldCurveFamily",
+      objectClass = "SpatRaster",
+      desc = "Yield Curve Family raster aligned to PlanningGrid."
+    ),
+    createsOutput(
+      objectName = "DMFL",
+      objectClass = "SpatRaster",
+      desc = "Designated Managed Forest Land raster aligned to PlanningGrid; 1 = inside DMFL, 0 = outside"
+    ),
+    createsOutput(
+      objectName = "Ownership",
+      objectClass = "SpatRaster",
+      desc = "National ownership raster aligned to PlanningGrid."
+    ),
+    createsOutput(
+      objectName = "protectedArea",
+      objectClass = "SpatRaster",
+      desc = "Protected area raster containing IUCN categories aligned to PlanningGrid."
+    )
+  )
+))
 
 doEvent.EasternCanadaDataPrep <- function(sim, eventTime, eventType) {
   switch(
@@ -209,7 +197,6 @@ doEvent.EasternCanadaDataPrep <- function(sim, eventTime, eventType) {
   )
   invisible(sim)
 }
-
 
 .inputObjects <- function(sim) {
   
@@ -510,7 +497,7 @@ doEvent.EasternCanadaDataPrep <- function(sim, eventTime, eventType) {
   }
   message("Ontario DMFL polygons ready.")
   # =========================================================
-  # 2) LandCover
+  # 9) LandCover
   # =========================================================
   
   if (SpaDES.core::suppliedElsewhere("LandCover", sim)) {
