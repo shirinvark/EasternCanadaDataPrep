@@ -207,15 +207,27 @@ doEvent.EasternCanadaDataPrep <- function(sim, eventTime, eventType) {
     sim$studyArea <- terra::vect(sim$studyArea)
   }
 
-  standardizeVectorToStudyArea <- function(x) {
-    if (!inherits(x, "SpatVector")) {
-      x <- terra::vect(x)
+  standardizeToStudyArea <- function(x) {
+    if (inherits(x, c("SpatVector", "sf", "sfc"))) {
+      if (!inherits(x, "SpatVector")) {
+        x <- terra::vect(x)
+      }
+      if (!terra::same.crs(x, sim$studyArea)) {
+        x <- terra::project(x, sim$studyArea)
+      }
+      x <- terra::crop(x, sim$studyArea)
+      return(x)
     }
-    if (!terra::same.crs(x, sim$studyArea)) {
-      x <- terra::project(x, sim$studyArea)
+
+    if (inherits(x, "SpatRaster")) {
+      if (!terra::same.crs(x, sim$studyArea)) {
+        x <- terra::project(x, sim$studyArea, method = "near")
+      }
+      x <- terra::crop(x, sim$studyArea)
+      return(x)
     }
-    x <- terra::crop(x, sim$studyArea)
-    x
+
+    stop("standardizeToStudyArea only supports SpatVector/sf/sfc/SpatRaster.")
   }
   
   ## ---------------------------------------------------------
@@ -237,7 +249,7 @@ doEvent.EasternCanadaDataPrep <- function(sim, eventTime, eventType) {
     )
   }
   
-  sim$CPCAD <- standardizeVectorToStudyArea(sim$CPCAD)
+  sim$CPCAD <- standardizeToStudyArea(sim$CPCAD)
   
   message("CPCAD ready. Features: ", nrow(sim$CPCAD))
   
@@ -261,7 +273,7 @@ doEvent.EasternCanadaDataPrep <- function(sim, eventTime, eventType) {
         userTags = c("EasternCanadaDataPrep", "FMU")
     )
   }
-  sim$FMU <- standardizeVectorToStudyArea(sim$FMU)
+  sim$FMU <- standardizeToStudyArea(sim$FMU)
 
   # ---------------------------------------------------------
   # SYU – Sustained Yield Units
@@ -276,7 +288,7 @@ doEvent.EasternCanadaDataPrep <- function(sim, eventTime, eventType) {
     sim$SYU <- sim$FMU
   }
 
-  sim$SYU <- standardizeVectorToStudyArea(sim$SYU)
+  sim$SYU <- standardizeToStudyArea(sim$SYU)
 
   ## ---------------------------------------------------------
   ## 4) BCR – Bird Conservation Regions
@@ -300,7 +312,7 @@ doEvent.EasternCanadaDataPrep <- function(sim, eventTime, eventType) {
     )
   }
   
-  sim$BCR <- standardizeVectorToStudyArea(sim$BCR)
+  sim$BCR <- standardizeToStudyArea(sim$BCR)
   
   if (nrow(sim$BCR) == 0) {
     stop("No BCR polygons overlap the study area.")
@@ -332,11 +344,11 @@ doEvent.EasternCanadaDataPrep <- function(sim, eventTime, eventType) {
       userTags = c("EasternCanadaDataPrep", "Jurisdiction")
     )
   }
-  sim$Jurisdiction <- standardizeVectorToStudyArea(sim$Jurisdiction)
+  sim$Jurisdiction <- standardizeToStudyArea(sim$Jurisdiction)
   message("Jurisdiction ready. Features: ", nrow(sim$Jurisdiction))
   
   ## ---------------------------------------------------------
-  ## 6) Ownership – National ownership layer
+  ## 6) Ownership – National ownership raster
   ## ---------------------------------------------------------
   if (!SpaDES.core::suppliedElsewhere("Ownership")) {
     
@@ -355,13 +367,7 @@ doEvent.EasternCanadaDataPrep <- function(sim, eventTime, eventType) {
     )
   }
   
-  if (!terra::same.crs(sim$Ownership, sim$studyArea)) {
-    sim$Ownership <- terra::project(
-      sim$Ownership,
-      sim$studyArea,
-      method = "near"
-    )
-  }
+  sim$Ownership <- standardizeToStudyArea(sim$Ownership)
   
   message("Ownership ready.")
 
@@ -397,7 +403,7 @@ doEvent.EasternCanadaDataPrep <- function(sim, eventTime, eventType) {
       userTags = c("EasternCanadaDataPrep", "YCF_NL")
     )
   }
-  sim$YCF_NL <- standardizeVectorToStudyArea(sim$YCF_NL)
+  sim$YCF_NL <- standardizeToStudyArea(sim$YCF_NL)
 
   ## ---------------------------------------------------------
   ## 8) Ontario DMFL
@@ -410,17 +416,14 @@ doEvent.EasternCanadaDataPrep <- function(sim, eventTime, eventType) {
       prepInputs,
       url = "https://drive.google.com/uc?export=download&id=10CLrF7yNeBdd0cjv4wD32v73DhDrswfK",
       destinationPath = file.path(dPath, "ON", "DMFL"),
-      targetFile = file.path(
-        "Ecoregions",
-        "ecoregions.shp"
-      ),
+      targetFile = file.path("Ecoregions", "ecoregions.shp"),
       fun = terra::vect,
       cropTo = sim$studyArea,
       projectTo = sim$studyArea,
       userTags = c("EasternCanadaDataPrep", "DMFL_ON")
     )
   }
-  sim$DMFL_ON <- standardizeVectorToStudyArea(sim$DMFL_ON)
+  sim$DMFL_ON <- standardizeToStudyArea(sim$DMFL_ON)
   message("Ontario DMFL polygons ready.")
 
   # =========================================================
