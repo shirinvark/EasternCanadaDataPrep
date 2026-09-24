@@ -35,10 +35,8 @@ defineModule(sim, list(
       NA,
       "Simulation time at which the first plot event should occur"
     ),
-    
     defineParameter(".plotInterval", "numeric", NA, NA, NA,
                     "Describes the simulation time interval between plot events."),
-   
     defineParameter(".saveInitialTime", "numeric", NA, NA, NA,
                     "Describes the simulation time at which the first save event should occur."),
     defineParameter(".saveInterval", "numeric", NA, NA, NA,
@@ -61,7 +59,6 @@ defineModule(sim, list(
     
   ),
   inputObjects = bindrows(
-    
     expectsInput("studyArea",
                  objectClass = c("sf", "SpatVector"),
                  desc = "Study area polygon",
@@ -199,25 +196,11 @@ doEvent.EasternCanadaDataPrep <- function(sim, eventTime, eventType) {
 }
 
 .inputObjects <- function(sim) {
-  
-  dPath <- getOption("reproducible.destinationPath")
-  
-  if (is.null(dPath)) {
-    stop(
-      "reproducible.destinationPath is not set. ",
-      "Set it to the project inputs directory before running the module."
-    )
-  }
-  
-  dPath <- asPath(dPath, 1)
-  
-  message(currentModule(sim), ": using input data path '", dPath, "'.")
-  
+  dPath <- asPath(inputPath(sim), 1)
   ## -------------------------------------------------------
   ## 1) Create studyArea if not provided by user
   ## -------------------------------------------------------
   if (!SpaDES.core::suppliedElsewhere("studyArea")) {
-    
     message("Creating default studyArea (Eastern Canada)...")
     
     can <- rnaturalearth::ne_states(
@@ -243,17 +226,10 @@ doEvent.EasternCanadaDataPrep <- function(sim, eventTime, eventType) {
     sim$studyArea <- terra::vect(sim$studyArea)
   }
   
-  studyArea_v <- sim$studyArea 
-  
-  
   ## ---------------------------------------------------------
   ## 2) CPCAD – Protected & conserved areas
   ## ---------------------------------------------------------
   if (!SpaDES.core::suppliedElsewhere("CPCAD")){
-    
-    cpcad_dir <- file.path(dPath, "CPCAD")
-    
-    
     message("Preparing CPCAD...")
     
     sim$CPCAD <- Cache(
@@ -263,58 +239,54 @@ doEvent.EasternCanadaDataPrep <- function(sim, eventTime, eventType) {
       targetFile = "CPCAD_2024.gpkg",
       fun = terra::vect,
       layer = "ProtectedConservedArea_2024",
-      cropTo = studyArea_v,
-      projectTo = studyArea_v
+      cropTo = sim$studyArea,
+      projectTo = sim$studyArea,
+      userTags = c("EasternCanadaDataPrep", "CPCAD")
     )
-    
   }
   
-  cpcad <- sim$CPCAD
-  
-  sim$CPCAD <- cpcad
   if (!inherits(sim$CPCAD, "SpatVector")) {
     sim$CPCAD <- terra::vect(sim$CPCAD)
   }
-  if (!terra::same.crs(sim$CPCAD, studyArea_v)) {
-    sim$CPCAD <- terra::project(sim$CPCAD, studyArea_v)
+  if (!terra::same.crs(sim$CPCAD, sim$studyArea)) {
+    sim$CPCAD <- terra::project(sim$CPCAD, sim$studyArea)
   }
   
   message("CPCAD ready. Features: ", nrow(sim$CPCAD))
-  
   
   ## ---------------------------------------------------------
   ## 3) FMU – Forest Management Units
   ## ---------------------------------------------------------
   if (!SpaDES.core::suppliedElsewhere("FMU")) {
-    
     fmu_dir <- file.path(dPath, "FMU")
     
     message("Preparing FMU...")
     
     sim$FMU <- Cache(
       prepInputs,
-      url = "https://drive.google.com/uc?export=download&id=1jfrgLrpB2nitynfZMS7lk-H7Fmbt0GK-",
-      destinationPath = fmu_dir,
-      targetFile = "Canada_FMU4.shp",
-      fun = terra::vect,
-      cropTo = studyArea_v,
-      projectTo = studyArea_v
+        url = "https://drive.google.com/uc?export=download&id=1jfrgLrpB2nitynfZMS7lk-H7Fmbt0GK-",
+        # url = "https://drive.google.com/file/d/1FDHdGS3v0Q31Ufc66V_jegJICmmXafqB",
+        destinationPath = fmu_dir,
+        targetFile = "Canada_FMU4.shp",
+        fun = terra::vect,
+        cropTo = sim$studyArea,
+        projectTo = sim$studyArea,
+        userTags = c("EasternCanadaDataPrep", "FMU")
     )
-    
   }
   if (!inherits(sim$FMU, "SpatVector")) {
     sim$FMU <- terra::vect(sim$FMU)
   }
-  if (!terra::same.crs(sim$FMU, studyArea_v)) {
-    sim$FMU <- terra::project(sim$FMU, studyArea_v)
+  if (!terra::same.crs(sim$FMU, sim$studyArea)) {
+    sim$FMU <- terra::project(sim$FMU, sim$studyArea)
   }
+
   # ---------------------------------------------------------
   # SYU – Sustained Yield Units
   #
   # Uses user-supplied SYU polygons when available.
   # Otherwise, uses the national FMU layer as the default SYU.
   # ---------------------------------------------------------
-  
   if (SpaDES.core::suppliedElsewhere("SYU", sim)) {
     
     message("Using user-supplied SYU polygons.")
@@ -323,23 +295,24 @@ doEvent.EasternCanadaDataPrep <- function(sim, eventTime, eventType) {
       sim$SYU <- terra::vect(sim$SYU)
     }
     
-    if (!terra::same.crs(sim$SYU, studyArea_v)) {
+    if (!terra::same.crs(sim$SYU, sim$studyArea)) {
       sim$SYU <- terra::project(
         sim$SYU,
-        terra::crs(studyArea_v)
+        terra::crs(sim$studyArea)
       )
     }
-    
-  } else {
+  } 
+  else {
     
     message(" No SYU supplied. Using FMU polygons as default SYU.")
     
     sim$SYU <- sim$FMU
   }
+
   ## ---------------------------------------------------------
   ## 4) BCR – Bird Conservation Regions
   ## ---------------------------------------------------------
-  
+
   if (!SpaDES.core::suppliedElsewhere("BCR")) {
     
     message("Preparing BCR...")
@@ -349,10 +322,12 @@ doEvent.EasternCanadaDataPrep <- function(sim, eventTime, eventType) {
       targetFile = "af5831ba-e41b-4b2e-9a0a-d8fcf2b70d70.gdb",
       url = "https://drive.google.com/uc?export=download&id=18pnd5-qDDwTmgHN2NxyU_VyBP3tk9R97",
       destinationPath = file.path(dPath, "BCR"),
-      alsoExtract = "\\.gdb/",
-      fun = sf::st_read,
+      # alsoExtract = "\\.gdb/",
+      fun = terra::vect,
       layer = "BCR_Terrestrial_Master",
-      quiet = TRUE
+      cropTo = sim$studyArea,
+      projectTo = sim$studyArea,
+      userTags = c("EasternCanadaDataPrep", "BCR")
     )
   }
   
@@ -361,17 +336,17 @@ doEvent.EasternCanadaDataPrep <- function(sim, eventTime, eventType) {
     sim$BCR <- terra::vect(sim$BCR)
   }
   
-  if (!terra::same.crs(sim$BCR, studyArea_v)) {
-    sim$BCR <- terra::project(sim$BCR, studyArea_v)
+  sim$BCR <- terra::crop(sim$BCR, sim$studyArea)
+  if (!terra::same.crs(sim$BCR, sim$studyArea)) {
+    sim$BCR <- terra::project(sim$BCR, sim$studyArea)
   }
-  
-  sim$BCR <- terra::crop(sim$BCR, studyArea_v)
   
   if (nrow(sim$BCR) == 0) {
     stop("No BCR polygons overlap the study area.")
   }
   
   message("BCR ready. Features: ", nrow(sim$BCR))
+  
   ## ---------------------------------------------------------
   ## 5) Jurisdiction – Administrative boundaries
   ## ---------------------------------------------------------
@@ -391,24 +366,23 @@ doEvent.EasternCanadaDataPrep <- function(sim, eventTime, eventType) {
         "boundaries_p_2021_v3.shp"
       ),
       fun = terra::vect,
-      cropTo = studyArea_v,
-      projectTo = studyArea_v
+      cropTo = sim$studyArea,
+      projectTo = sim$studyArea,
+      userTags = c("EasternCanadaDataPrep", "Jurisdiction")
     )
-    
   }
   if (!inherits(sim$Jurisdiction, "SpatVector")) {
     sim$Jurisdiction <- terra::vect(sim$Jurisdiction)
   }
   
-  if (!terra::same.crs(sim$Jurisdiction, studyArea_v)) {
-    sim$Jurisdiction <- terra::project(sim$Jurisdiction, studyArea_v)
+  if (!terra::same.crs(sim$Jurisdiction, sim$studyArea)) {
+    sim$Jurisdiction <- terra::project(sim$Jurisdiction, sim$studyArea)
   }
   message("Jurisdiction ready. Features: ", nrow(sim$Jurisdiction))
   
   ## ---------------------------------------------------------
   ## 6) Ownership – National ownership layer
   ## ---------------------------------------------------------
-  
   if (!SpaDES.core::suppliedElsewhere("Ownership")) {
     
     message("Preparing Ownership...")
@@ -421,24 +395,24 @@ doEvent.EasternCanadaDataPrep <- function(sim, eventTime, eventType) {
       destinationPath = ownership_dir,
       targetFile = "Ownership.tif",
       fun = terra::rast,
-      cropTo = studyArea_v
+      cropTo = sim$studyArea,
+      userTags = c("EasternCanadaDataPrep", "Ownership")
     )
   }
   
-  if (!terra::same.crs(sim$Ownership, studyArea_v)) {
-    
+  if (!terra::same.crs(sim$Ownership, sim$studyArea)) {
     sim$Ownership <- terra::project(
       sim$Ownership,
-      studyArea_v,
+      sim$studyArea,
       method = "near"
     )
   }
   
   message("Ownership ready.")
+
   ## ---------------------------------------------------------
   ## 7) Yield Curve Family
   ## ---------------------------------------------------------
-  
   if (!SpaDES.core::suppliedElsewhere("YCF_ON")) {
     
     message("Preparing Ontario Yield Curve Family...")
@@ -448,13 +422,15 @@ doEvent.EasternCanadaDataPrep <- function(sim, eventTime, eventType) {
       url = "https://raw.githubusercontent.com/shirinvark/EasternCanadaDataPrep/main/data/ON/YCF/combined_regions.zip",
       destinationPath = file.path(dPath, "ON"),
       targetFile = "combined_regions.shp",
-      fun = terra::vect
+      fun = terra::vect,
+      userTags = c("EasternCanadaDataPrep", "YCF_ON")
     )
-    
   }
+
   if (!inherits(sim$YCF_ON, "SpatVector")) {
     sim$YCF_ON <- terra::vect(sim$YCF_ON)
   }
+
   if (!SpaDES.core::suppliedElsewhere("YCF_NL")) {
     
     message("Preparing Newfoundland Yield Curve Family...")
@@ -464,17 +440,17 @@ doEvent.EasternCanadaDataPrep <- function(sim, eventTime, eventType) {
       url = "https://raw.githubusercontent.com/shirinvark/EasternCanadaDataPrep/main/data/NL/YCF/NL_YCF.zip",
       destinationPath = file.path(dPath, "NL"),
       targetFile = "NL_YCF.shp",
-      fun = terra::vect
+      fun = terra::vect,
+      userTags = c("EasternCanadaDataPrep", "YCF_NL")
     )
-    
   }
   if (!inherits(sim$YCF_NL, "SpatVector")) {
     sim$YCF_NL <- terra::vect(sim$YCF_NL)
   }
+
   ## ---------------------------------------------------------
   ## 8) Ontario DMFL
   ## ---------------------------------------------------------
-  
   if (!SpaDES.core::suppliedElsewhere("DMFL_ON")) {
     
     message("Preparing Ontario DMFL polygons...")
@@ -488,24 +464,22 @@ doEvent.EasternCanadaDataPrep <- function(sim, eventTime, eventType) {
         "ecoregions.shp"
       ),
       fun = terra::vect,
-      cropTo = studyArea_v,
-      projectTo = studyArea_v
+      cropTo = sim$studyArea,
+      projectTo = sim$studyArea,
+      userTags = c("EasternCanadaDataPrep", "DMFL_ON")
     )
   }
   if (!inherits(sim$DMFL_ON, "SpatVector")) {
     sim$DMFL_ON <- terra::vect(sim$DMFL_ON)
   }
   message("Ontario DMFL polygons ready.")
+
   # =========================================================
   # 9) LandCover
   # =========================================================
-  
   if (SpaDES.core::suppliedElsewhere("LandCover", sim)) {
-    
     message("Using LandCover supplied from upstream or user.")
-    
   } else {
-    
     #dPath <- SpaDES.core::dataPath(sim)
     
     lc_dir <- file.path(dPath, "LandCover")
@@ -514,13 +488,9 @@ doEvent.EasternCanadaDataPrep <- function(sim, eventTime, eventType) {
     lc_file <- file.path(lc_dir, "LandCover.tif")
     
     if (file.exists(lc_file)) {
-      
       message("LandCover found locally. Loading...")
-      
       sim$LandCover <- terra::rast(lc_file)
-      
     } else {
-      
       message(" LandCover not found locally. Downloading from Drive...")
       
       sim$LandCover <- Cache(
@@ -529,13 +499,12 @@ doEvent.EasternCanadaDataPrep <- function(sim, eventTime, eventType) {
         destinationPath = lc_dir,
         targetFile = "LandCover.tif",
         fun = terra::rast,
-        overwrite = FALSE
+        overwrite = FALSE,
+        userTags = c("EasternCanadaDataPrep", "LandCover")
       )
     }
   }
-  
   return(invisible(sim))
-  
 }  # end .inputObjects
 
 ggplotFn <- function(data, ...) {
