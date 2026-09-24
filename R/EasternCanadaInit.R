@@ -1,5 +1,4 @@
 EasternCanadaInit <- function(sim) {
-  
   message("init: building Eastern Canada spatial products")
   
   stopifnot(
