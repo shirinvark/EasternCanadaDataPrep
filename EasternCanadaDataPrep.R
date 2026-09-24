@@ -16,25 +16,13 @@ defineModule(sim, list(
   citation = list("citation.bib"),
   documentation = list("NEWS.md", "README.md", "EasternCanadaDataPrep.Rmd"),
   reqdPkgs = list(
-    "SpaDES.core (>= 2.1.8.9001)",
-    "ggplot2",
-    "reproducible",
-    "sf",
-    "terra",
-    "LandR" ,
-    "rnaturalearth"
+    "SpaDES.core (>= 2.1.8.9001)", "ggplot2", "reproducible", "sf", "terra", "LandR" , "rnaturalearth"
   ), 
   parameters = bindrows(
     defineParameter(".plots", "character", "screen", NA, NA,
                     "Used by Plots function, which can be optionally used here"),
-    defineParameter(
-      ".plotInitialTime",
-      "numeric",
-      NA,
-      NA,
-      NA,
-      "Simulation time at which the first plot event should occur"
-    ),
+    defineParameter(".plotInitialTime", "numeric", NA, NA, NA,
+                    "Simulation time at which the first plot event should occur"),
     defineParameter(".plotInterval", "numeric", NA, NA, NA,
                     "Describes the simulation time interval between plot events."),
     defineParameter(".saveInitialTime", "numeric", NA, NA, NA,
@@ -46,17 +34,10 @@ defineModule(sim, list(
                     "area obtained using `reproducible::studyAreaName()`"),
     defineParameter(".seed", "list", list(), NA, NA,
                     "Named list of seeds to use for each event (names)."),
-    defineParameter(
-      "dataYear",
-      "numeric",
-      2001,
-      NA,
-      NA,
-      "Year of NFI stand age dataset (e.g., 2001 or 2011)"
-    ),
+    defineParameter("dataYear", "numeric", 2001, NA, NA,
+      "Year of NFI stand age dataset (e.g., 2001 or 2011)"),
     defineParameter(".useCache", "logical", FALSE, NA, NA,
                     "Should caching of events or module be used?"),
-    
   ),
   inputObjects = bindrows(
     expectsInput("studyArea",
@@ -443,7 +424,7 @@ doEvent.EasternCanadaDataPrep <- function(sim, eventTime, eventType) {
   message("Ontario DMFL polygons ready.")
 
   # =========================================================
-  # 9) LandCover
+  # 9) LandCover raster
   # =========================================================
   if (SpaDES.core::suppliedElsewhere("LandCover", sim)) {
     message("Using LandCover supplied from upstream or user.")
@@ -474,8 +455,3 @@ doEvent.EasternCanadaDataPrep <- function(sim, eventTime, eventType) {
   }
   return(invisible(sim))
 }  # end .inputObjects
-
-ggplotFn <- function(data, ...) {
-  ggplot2::ggplot(data, ggplot2::aes(TheSample)) +
-    ggplot2::geom_histogram(...)
-}
