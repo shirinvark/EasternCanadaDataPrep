@@ -225,6 +225,17 @@ doEvent.EasternCanadaDataPrep <- function(sim, eventTime, eventType) {
   if (!inherits(sim$studyArea, "SpatVector")) {
     sim$studyArea <- terra::vect(sim$studyArea)
   }
+
+  standardizeVectorToStudyArea <- function(x) {
+    if (!inherits(x, "SpatVector")) {
+      x <- terra::vect(x)
+    }
+    if (!terra::same.crs(x, sim$studyArea)) {
+      x <- terra::project(x, sim$studyArea)
+    }
+    x <- terra::crop(x, sim$studyArea)
+    x
+  }
   
   ## ---------------------------------------------------------
   ## 2) CPCAD – Protected & conserved areas
@@ -245,12 +256,7 @@ doEvent.EasternCanadaDataPrep <- function(sim, eventTime, eventType) {
     )
   }
   
-  if (!inherits(sim$CPCAD, "SpatVector")) {
-    sim$CPCAD <- terra::vect(sim$CPCAD)
-  }
-  if (!terra::same.crs(sim$CPCAD, sim$studyArea)) {
-    sim$CPCAD <- terra::project(sim$CPCAD, sim$studyArea)
-  }
+  sim$CPCAD <- standardizeVectorToStudyArea(sim$CPCAD)
   
   message("CPCAD ready. Features: ", nrow(sim$CPCAD))
   
@@ -274,12 +280,7 @@ doEvent.EasternCanadaDataPrep <- function(sim, eventTime, eventType) {
         userTags = c("EasternCanadaDataPrep", "FMU")
     )
   }
-  if (!inherits(sim$FMU, "SpatVector")) {
-    sim$FMU <- terra::vect(sim$FMU)
-  }
-  if (!terra::same.crs(sim$FMU, sim$studyArea)) {
-    sim$FMU <- terra::project(sim$FMU, sim$studyArea)
-  }
+  sim$FMU <- standardizeVectorToStudyArea(sim$FMU)
 
   # ---------------------------------------------------------
   # SYU – Sustained Yield Units
@@ -288,26 +289,13 @@ doEvent.EasternCanadaDataPrep <- function(sim, eventTime, eventType) {
   # Otherwise, uses the national FMU layer as the default SYU.
   # ---------------------------------------------------------
   if (SpaDES.core::suppliedElsewhere("SYU", sim)) {
-    
     message("Using user-supplied SYU polygons.")
-    
-    if (!inherits(sim$SYU, "SpatVector")) {
-      sim$SYU <- terra::vect(sim$SYU)
-    }
-    
-    if (!terra::same.crs(sim$SYU, sim$studyArea)) {
-      sim$SYU <- terra::project(
-        sim$SYU,
-        terra::crs(sim$studyArea)
-      )
-    }
-  } 
-  else {
-    
+  } else {
     message(" No SYU supplied. Using FMU polygons as default SYU.")
-    
     sim$SYU <- sim$FMU
   }
+
+  sim$SYU <- standardizeVectorToStudyArea(sim$SYU)
 
   ## ---------------------------------------------------------
   ## 4) BCR – Bird Conservation Regions
@@ -331,15 +319,7 @@ doEvent.EasternCanadaDataPrep <- function(sim, eventTime, eventType) {
     )
   }
   
-  # Standardize to SpatVector immediately
-  if (!inherits(sim$BCR, "SpatVector")) {
-    sim$BCR <- terra::vect(sim$BCR)
-  }
-  
-  sim$BCR <- terra::crop(sim$BCR, sim$studyArea)
-  if (!terra::same.crs(sim$BCR, sim$studyArea)) {
-    sim$BCR <- terra::project(sim$BCR, sim$studyArea)
-  }
+  sim$BCR <- standardizeVectorToStudyArea(sim$BCR)
   
   if (nrow(sim$BCR) == 0) {
     stop("No BCR polygons overlap the study area.")
@@ -371,13 +351,7 @@ doEvent.EasternCanadaDataPrep <- function(sim, eventTime, eventType) {
       userTags = c("EasternCanadaDataPrep", "Jurisdiction")
     )
   }
-  if (!inherits(sim$Jurisdiction, "SpatVector")) {
-    sim$Jurisdiction <- terra::vect(sim$Jurisdiction)
-  }
-  
-  if (!terra::same.crs(sim$Jurisdiction, sim$studyArea)) {
-    sim$Jurisdiction <- terra::project(sim$Jurisdiction, sim$studyArea)
-  }
+  sim$Jurisdiction <- standardizeVectorToStudyArea(sim$Jurisdiction)
   message("Jurisdiction ready. Features: ", nrow(sim$Jurisdiction))
   
   ## ---------------------------------------------------------
@@ -427,9 +401,7 @@ doEvent.EasternCanadaDataPrep <- function(sim, eventTime, eventType) {
     )
   }
 
-  if (!inherits(sim$YCF_ON, "SpatVector")) {
-    sim$YCF_ON <- terra::vect(sim$YCF_ON)
-  }
+  sim$YCF_ON <- standardizeVectorToStudyArea(sim$YCF_ON)
 
   if (!SpaDES.core::suppliedElsewhere("YCF_NL")) {
     
@@ -444,9 +416,7 @@ doEvent.EasternCanadaDataPrep <- function(sim, eventTime, eventType) {
       userTags = c("EasternCanadaDataPrep", "YCF_NL")
     )
   }
-  if (!inherits(sim$YCF_NL, "SpatVector")) {
-    sim$YCF_NL <- terra::vect(sim$YCF_NL)
-  }
+  sim$YCF_NL <- standardizeVectorToStudyArea(sim$YCF_NL)
 
   ## ---------------------------------------------------------
   ## 8) Ontario DMFL
@@ -469,9 +439,7 @@ doEvent.EasternCanadaDataPrep <- function(sim, eventTime, eventType) {
       userTags = c("EasternCanadaDataPrep", "DMFL_ON")
     )
   }
-  if (!inherits(sim$DMFL_ON, "SpatVector")) {
-    sim$DMFL_ON <- terra::vect(sim$DMFL_ON)
-  }
+  sim$DMFL_ON <- standardizeVectorToStudyArea(sim$DMFL_ON)
   message("Ontario DMFL polygons ready.")
 
   # =========================================================
