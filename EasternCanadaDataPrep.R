@@ -388,7 +388,9 @@ doEvent.EasternCanadaDataPrep <- function(sim, eventTime, eventType) {
     )
   }
 
-  sim$YCF_ON <- standardizeVectorToStudyArea(sim$YCF_ON)
+ #sim$YCF_ON <- standardizeVectorToStudyArea(sim$YCF_ON)
+  
+  sim$YCF_ON <- standardizeToStudyArea(sim$YCF_ON)
 
   if (!SpaDES.core::suppliedElsewhere("YCF_NL")) {
     
