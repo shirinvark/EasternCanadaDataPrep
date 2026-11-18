@@ -6,7 +6,15 @@
 #------------------------------------------------------------------------------
 
 buildSYU <- function(sim) {
-  
+  # Skip rebuilding SYU if a valid raster and lookup already exist
+  if (
+    inherits(sim$SYU, "SpatRaster") &&
+    inherits(sim$SYULookup, "data.frame") &&
+    nrow(sim$SYULookup) > 0
+  ) {
+    message("SYU raster and lookup already exist. Skipping buildSYU().")
+    return(invisible(sim))
+  }  
   message("Building Sustained Yield Unit raster...")
   
   stopifnot(
