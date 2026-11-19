@@ -46,16 +46,14 @@ buildYieldCurveFamily <- function(sim) {
   )
   
   names(sim$yieldCurveFamily) <- "yieldCurveFamily"
-  
-  levels(sim$yieldCurveFamily) <- data.frame(
+  print(names(ycf))
+  print(head(terra::as.data.frame(ycf)[, c("ID", "Province", "YCF")]))
+  sim$yieldCurveLookup <- data.frame(
     ID = ycf$ID,
     Province = ycf$Province,
     YCF = ycf$YCF
   )
   
-  sim$yieldCurveLookup <- levels(
-    sim$yieldCurveFamily
-  )[[1]]
-  
+  levels(sim$yieldCurveFamily) <- sim$yieldCurveLookup  
   sim
 }

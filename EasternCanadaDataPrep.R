@@ -148,6 +148,11 @@ defineModule(sim, list(
       desc = "Yield Curve Family raster aligned to PlanningGrid."
     ),
     createsOutput(
+      objectName = "yieldCurveLookup",
+      objectClass = c("data.frame", "data.table"),
+      desc = "Lookup table linking Yield Curve Family IDs to province and YCF region."
+    ),
+    createsOutput(
       objectName = "DMFL",
       objectClass = "SpatRaster",
       desc = "Designated Managed Forest Land raster aligned to PlanningGrid; 1 = inside DMFL, 0 = outside"
